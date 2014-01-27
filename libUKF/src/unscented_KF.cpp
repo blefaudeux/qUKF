@@ -3,7 +3,7 @@
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
- *  @file sigma_point.cpp
+ *  @file unscented_KF.cpp
  *  @brief Implements a class of sigma points, to be used with UKF
  *  @version 1.0
  *  @date 12-11-2013
@@ -30,7 +30,7 @@ UKF::UKF(const MatrixXf &initial_state,
       || (process_noise.rows () != process_noise.cols ())
       || (measurement_noise.rows () != measurement_noise.cols ())){
 
-    THROW_ERR("UKF : Matrices don't have compatible shapes")
+    THROW_ERR("UKF : Matrices don't have compatible shapes");
   }
 
   // Take extended state vector into account
@@ -104,7 +104,7 @@ UKF::UKF(const MatrixXf &initial_state,
       || (initial_q_cov.rows () != initial_q_cov.cols ())
       || (process_q_noise.rows () != process_q_noise.cols ())
       || (measurement_q_noise.rows () != measurement_q_noise.cols ())){
-    THROW_ERR("UKF : Matrices don't have compatible shapes")
+    THROW_ERR("UKF : Matrices don't have compatible shapes");
   }
 
   // Take extended state vector into account
@@ -347,7 +347,7 @@ void UKF::propagateSigmaPoints() {
   if (b_first_time) {
     printf("UKF : set propagation function and propagate sigma points\n");
     if (_propagateFunc == NULL) {
-      THROW_ERR("UKF : Propagation function must be defined before propagating sigma points")
+      THROW_ERR("UKF : Propagation function must be defined before propagating sigma points");
     }
     _particles->setPropagationFunction (_propagateFunc);
 
@@ -371,7 +371,7 @@ void UKF::propagateSigmaQPoints() {
   if (b_first_time) {
     printf("UKF : set propagation function and propagate sigma Q points\n");
     if (_propagateQFunc == NULL) {
-      THROW_ERR("UKF : Quaternions propagation function must be defined before propagating sigma points")
+      THROW_ERR("UKF : Quaternions propagation function must be defined before propagating sigma points");
     }
     _q_particles->setPropagationFunction (_propagateQFunc);
 
@@ -487,13 +487,13 @@ void UKF::setPropagationQFunction (void (*_prop_function) (const Quaternionf &, 
 void UKF::update (const MatrixXf &new_measure) {
   // Failsafe stupid tests
   if (new_measure.rows () != _dim) {
-    THROW_ERR("UKF : Wrong measure vector dimension\n")
+    THROW_ERR("UKF : Wrong measure vector dimension\n");
   } else if (_measurementFunc == NULL) {
-    THROW_ERR("UKF : Measurement function is not defined")
+    THROW_ERR("UKF : Measurement function is not defined");
   }
 
   if (b_use_quaternions) {
-    THROW_ERR("UKF : Filter including quaternions, you cannot just update vector values\n")
+    THROW_ERR("UKF : Filter including quaternions, you cannot just update vector values\n");
   }
 
   updateParticles (new_measure);
@@ -508,13 +508,13 @@ void UKF::update (const MatrixXf &vec_measure, const MatrixXf &angle_measure) {
 
   // Failsafe stupid tests
   if (vec_measure.rows () != _dim) {
-    THROW_ERR("UKF : Wrong measure vector dimension\n")
+    THROW_ERR("UKF : Wrong measure vector dimension\n");
   } else if (_measurementFunc == NULL) {
-    THROW_ERR("UKF : Measurement function is not defined")
+    THROW_ERR("UKF : Measurement function is not defined");
   }
 
   if (!b_use_quaternions) {
-    THROW_ERR("UKF : Vector-only filter, you cannot update quaternions\n")
+    THROW_ERR("UKF : Vector-only filter, you cannot update quaternions\n");
   }
 
   // Update Sigma points
