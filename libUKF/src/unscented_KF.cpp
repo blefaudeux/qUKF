@@ -4,7 +4,7 @@
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
  *  @file unscented_KF.cpp
- *  @brief Implements UKF filter
+ *  @brief Implements a UKF filter with quaternions to filter angular positions
  *  @version 1.0
  *  @date 12-11-2013
  */
@@ -18,10 +18,10 @@ UKF::UKF(const MatrixXf &initial_state,
   _time_step = 1.f;
 
   b_first_time = true;
-  _particles = NULL;
-  _q_particles = NULL;
-  _propagateFunc = NULL;
-  _measurementFunc = NULL;
+  _particles        = NULL;
+  _q_particles      = NULL;
+  _propagateFunc    = NULL;
+  _measurementFunc  = NULL;
 
   if ((initial_state.cols () != 1)
       || (initial_cov.rows () != initial_state.rows ())
@@ -52,19 +52,19 @@ UKF::UKF(const MatrixXf &initial_state,
                    measurement_noise.cols ()) = measurement_noise;
 
   // Set _post values
-  k_state_post = k_state_pre;
-  k_cov_post = k_cov_pre;
+  k_state_post  = k_state_pre;
+  k_cov_post    = k_cov_pre;
 
   k_expected_cov.setIdentity (dim_ext, dim_ext);
 
-  k_process_noise = process_noise;
+  k_process_noise     = process_noise;
   k_measurement_noise = measurement_noise;
 
   k_cov_cross_pred_meas.setZero (dim_ext, dim_ext);
   k_cov_cross_pred_ref.setZero (dim_ext, dim_ext);
 
   k_gain.setZero (dim_ext, dim_ext);
-  k_innovation.setZero(dim_ext, 1);
+  k_innovation.setZero (dim_ext, 1);
 
   _kappa = kappa;
 

@@ -24,15 +24,19 @@ int main() {
     }
 
   // Track the circling targets
-  float measurements[3];
+  float measurements[6] = {0,0,0,0,0,0};
   float filtered_state[3];
   float predicted_state[3];
+  float previous_state[3];
+
 
   for(;;angle += 0.01) {
       cvZero(image);
 
       // Create a new measurement for every target, and do the update
       for (unsigned int i=0; i< n_targets; ++i) {
+          motion_estimators[i]->getLatestSate(previous_state);
+
           // Propagate the previous state
           motion_estimators[i]->predict();
 
@@ -42,6 +46,9 @@ int main() {
           // Update the state with a new noisy measurement :
           measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
           measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
+
+          measurements[3] = measurements[0] - previous_state[0]; // Define a new 'speed' measurement
+          measurements[4] = measurements[1] - previous_state[1];
 
           motion_estimators[i]->update(measurements);
 

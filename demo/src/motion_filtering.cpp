@@ -19,16 +19,17 @@
  */
 void pointPropagation_speed(const MatrixXf &points_in, MatrixXf &points_out) {
   // Constant acceleration model... :
+  MatrixXf prop_matrix;
+  int dim = points_in.rows ();
+  prop_matrix.setIdentity(dim,dim);
+  prop_matrix(0,3) = 1.f;
+  prop_matrix(1,4) = 1.f;
+  prop_matrix(2,5) = 1.f;
 
-//  MatrixXf prop_matrix;
-//  int dim = points_in.rows ();
-//  prop_matrix.setIdentity(dim,dim);
-//  prop_matrix(0,3) = 1.f;
-//  prop_matrix(1,4) = 1.f;
-//  prop_matrix(2,5) = 1.f;
+  points_out.resizeLike(points_in);
+  points_out = prop_matrix * points_in;
 
-//  points_out.resizeLike(points_in);
-//  points_out = prop_matrix * points_in;
+//  cout << "Propagated points : \n" << points_in << "\n" << points_out << endl;
 
   points_out.resizeLike(points_in);
   points_out = points_in;
@@ -77,7 +78,6 @@ void meas_function(const MatrixXf &vec_in, MatrixXf &vec_measured) {
   }
 }
 
-
 /*!
  * \brief meas_q_function : defines the measurement function which will be used in the UKF
  */
@@ -101,13 +101,17 @@ MotionEstimation::MotionEstimation(const float *variable,
   // - initial position
   // - initial speed
 
-  _measure.setZero (3,1);
+  _measure.setZero (6,1);
   _measure(0,0) = variable[0];
   _measure(1,0) = variable[1];
   _measure(2,0) = variable[2];
+  _measure(3,0) = variable[0];
+  _measure(4,0) = variable[1];
+  _measure(5,0) = variable[2];
 
-  _initial_cov.setIdentity(3,3);
-  _model_noise.setIdentity(3,3);
+
+  _initial_cov.setIdentity(6,6);
+  _model_noise.setIdentity(6,6);
   _measurement_noise.setIdentity(3,3);
 
   _initial_cov *= 1.f;
