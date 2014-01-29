@@ -26,6 +26,7 @@ int main() {
   // Track the circling targets
   float measurements[3];
   float filtered_state[3];
+  float predicted_state[3];
 
   for(;;angle += 0.01) {
       cvZero(image);
@@ -35,6 +36,9 @@ int main() {
           // Propagate the previous state
           motion_estimators[i]->predict();
 
+          // Get the predicted state :
+          motion_estimators[i]->getLatestSate(predicted_state);
+
           // Update the state with a new noisy measurement :
           measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
           measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
@@ -42,18 +46,21 @@ int main() {
           motion_estimators[i]->update(measurements);
 
           // Get the filtered state :
-          motion_estimators[i]->getLatestSate(filtered_state);
+          motion_estimators[i]->getLatestSate(filtered_state);          
 
           // Draw both the noisy input and the filtered state :
           cvDrawCircle(image,cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
           cvDrawCircle(image,cvPoint(filtered_state[0],filtered_state[1]),2,cvScalar(0,255,0),2);
+
+          // Show the predicted motion vector (?)
+          cvDrawLine(image, cvPoint(filtered_state[0],filtered_state[1]), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
         }
 
 
       // Show this stuff
       cvShowImage("image",image);
       printf("-----------------------------------------------------------------\n");
-      int k = cvWaitKey(33);
+      int k = cvWaitKey(20);
 
       if ((k == 27) || (k == 1048603))
         break;
