@@ -4,12 +4,12 @@ project(LIBUKF)
 cmake_minimum_required(VERSION 2.6)
 
 # Add all the files we're interested in (mostly for QTCreator)
-file(GLOB ${LIBUKF_SOURCE_DIR}/src *.cpp)
-file(GLOB ${LIBUKF_SOURCE_DIR}/headers *.h)
+file(GLOB SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB HEADERS ${PROJECT_SOURCE_DIR}/headers/*.h)
 
 # Define the included directories
-include_directories(${LIBUKF_SOURCE_DIR}/src)
-include_directories(${LIBUKF_SOURCE_DIR}/headers)
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/headers)
 
 set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
 
@@ -30,13 +30,13 @@ include_directories( "${EIGEN3_INCLUDE_DIR}" )
 find_package(Boost REQUIRED)
 
 # Create static and dynamic libraries
-add_library (libUKF_static STATIC src/unscented_KF.cpp) 
-add_library (libUKF_dynamic SHARED src/unscented_KF.cpp) 
+add_library (UKF_static STATIC ${SRC} ${HEADERS})
+add_library (UKF_dynamic SHARED ${SRC} ${HEADERS})
 
 # Set the link libraries :
-TARGET_LINK_LIBRARIES(libUKF_static ${Boost_LIBRARIES} )
-TARGET_LINK_LIBRARIES(libUKF_dynamic ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(UKF_static ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(UKF_dynamic ${Boost_LIBRARIES} )
 
-# Define the installation procedure
-install(TARGETS libUKF_static DESTINATION lib)
-install(FILES unscented_KF.h DESTINATION include)
+## Define the installation procedure
+#install(TARGETS libUKF_dynamic libUKF_static DESTINATION lib)
+#install(FILES unscented_KF.h DESTINATION include)

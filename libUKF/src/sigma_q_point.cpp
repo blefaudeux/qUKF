@@ -3,8 +3,8 @@
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
- *  @file sigma_point.cpp
- *  @brief Implements a class of sigma points, to be used with UKF
+ *  @file sigma_q_point.cpp
+ *  @brief Implements a class of sigma points, to be used with UKF. Points are quaternions in this case !
  *  @version 1.0
  *  @date 12-11-2013
  */
@@ -515,7 +515,7 @@ void SigmaQPoints::setState(const MatrixXf &mean,
  */
 void SigmaQPoints::projectSigmaQPoints() {
   _sigma_pt.clear();
-  int i = 0;
+  unsigned int i = 0;
 
   // Get angles back from the quaternions and get the tail values for sigma_meas_points
   i = 0;

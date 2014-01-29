@@ -3,8 +3,8 @@
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
- *  @file sigma_point.cpp
- *  @brief Implements a class of sigma points, to be used with UKF
+ *  @file eigen_tools.cpp
+ *  @brief Some tools to be used on top of Eigen matrices and computations
  *  @version 1.0
  *  @date 12-11-2013
  */
@@ -47,7 +47,7 @@ float pseudo_inv(const Eigen::MatrixXf *mat_in,
 
   // Get matrices dimension :
   if (mat_in->cols () != mat_in->rows ()) {
-    THROW_ERR("Cannot compute matrix pseudo_inverse")
+    THROW_ERR("Cannot compute matrix pseudo_inverse");
   } else {
     dim = mat_in->cols ();
   }

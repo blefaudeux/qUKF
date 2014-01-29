@@ -1,70 +1,74 @@
 #include <cv.h>
 #include <highgui.h>
-#include <lcpp_gmphd/gmphd_filter.h>
-
+#include <motion_filtering.h>
 
 int main() {
 
-  float pose = 0.0;
-
-  // Instanciate the motion filter
-  motion_estimator = new MotionEstimation(&pose, 1.0, 1.0, 1.0).
-
   // Deal with the OpenCV window..
   float angle = CV_PI/2-0.03;
-  int width   = 800;
-  int height  = 800;
+  unsigned int width   = 800;
+  unsigned int height  = 800;
+
+  int n_targets = 5;
 
   IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
+  // Instanciate the motion filters
+  float poses[3] = {0,0,0};
+
+  MotionEstimation **motion_estimators;
+  motion_estimators = new MotionEstimation*[n_targets];
+
+  for (unsigned int i=0; i<n_targets; ++i) {
+      motion_estimators[i] = new MotionEstimation(&poses[i], 10.0, 1.0, 1.0);
+    }
+
+  // Track the circling targets
+  float measurements[3];
+  float filtered_state[3];
+
   for(;;angle += 0.01) {
-	  cvZero(image);
-	  //int nb_target_all = 1+rand()%(max_target-1);
-	  int nb_target_all = 1;
+      cvZero(image);
 
-	  vector<float> measurements;
-	  measurements.resize(dim_measure*nb_target_all);
-	  int nb_target = rand()%nb_target_all;
-	  for (int i=0; i< nb_target>>1; ++i) {
-		  int x = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%10);
-		  int y = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%10);
-		  measurements[dim_measure*i]   = x;
-		  measurements[dim_measure*i+1] = y;
-		  cvDrawCircle(image,cvPoint(x,y),2,cvScalar(0,0,255),2);
-	  }
-	  for (int i=nb_target>>1; i< nb_target_all; ++i) {
-		  int x = (width>>1)  + 300*cos(angle+CV_PI) + (rand()%2==1?-1:1)*(rand()%10);
-		  int y = (height>>1) + 300*sin(angle+CV_PI) + (rand()%2==1?-1:1)*(rand()%10);
-		  measurements[dim_measure*i]   = x;
-		  measurements[dim_measure*i+1] = y;
-		  cvDrawCircle(image,cvPoint(x,y),2,cvScalar(0,0,255),2);
-	  }
+      // Create a new measurement for every target, and do the update
+      for (unsigned int i=0; i< n_targets; ++i) {
+          // Propagate the previous state
+          motion_estimators[i]->predict();
 
-	  gmphd.setNewMeasurements(measurements);
-	  gmphd.propagate();
-	  vector<float> weight;
-	  vector<float> position;
-	  vector<float> speed;
-	  gmphd.getTrackedTargets(gmphd_threshold,position,speed,weight);
+          // Update the state with a new noisy measurement :
+          measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
+          measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
+
+          motion_estimators[i]->update(measurements);
+
+          // Get the filtered state :
+          motion_estimators[i]->getLatestSate(filtered_state);
+
+          // Draw both the noisy input and the filtered state :
+          cvDrawCircle(image,cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
+          cvDrawCircle(image,cvPoint(filtered_state[0],filtered_state[1]),2,cvScalar(0,255,0),2);
+        }
 
 
-	  birth_model.clear();
-	  for (int i=0; i< position.size(); i+=2) {
-// 			GaussianModel birth_gaussian;
-// 			birth_gaussian.cov       = MatrixXf::Identity(dim_state,dim_state);
-// 			birth_gaussian.mean      = MatrixXf::Zero(dim_state,1);
-// 			birth_gaussian.mean(0,0) = position[i];
-// 			birth_gaussian.mean(1,0) = position[i+1];
-// 			birth_model.push_back(birth_gaussian);
-		  cvDrawCircle(image,cvPoint(position[i],position[i+1]),5,cvScalar(0,255,0),2);
-	  }
-	  //gmphd.setBirthModel(birth_model);
+      // Show this stuff
+      cvShowImage("image",image);
+      printf("-----------------------------------------------------------------\n");
+      int k = cvWaitKey(33);
 
-	  cvShowImage("image",image);
-	  printf("-----------------------------------------------------------------\n");
-	  if( cvWaitKey(5) == 27)
-		  break;
-  }
+      if ((k == 27) || (k == 1048603))
+        break;
+      else if (k != -1)
+        printf("Key pressed : %d\n", k);
+    }
+
+
+  // Close everything and leave
   cvReleaseImage(&image);
+  for (int i=0; i<n_targets; ++i) {
+      delete motion_estimators[i];
+    }
+
+  delete []motion_estimators;
+
   return 1;
 }

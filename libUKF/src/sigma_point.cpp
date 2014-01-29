@@ -19,7 +19,7 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
 
   if ( (mean.rows () != cov.cols ()) ||
        cov.cols () != cov.rows ()) {
-    THROW_ERR("SPoint : Could not create sigma points, matrix sizes do not match")
+    THROW_ERR("SPoint : Could not create sigma points, matrix sizes do not match");
   }
 
   _dim   = mean.rows ();
@@ -138,7 +138,7 @@ void SigmaPoints::getMeasuredState(MatrixXf &mean,
  */
 void SigmaPoints::measureSigmaPoints () {
   if (_measurementFunc == NULL) {
-    THROW_ERR("Sigma points : measurement function undefined")
+    THROW_ERR("Sigma points : measurement function undefined");
   }
 
   _weight = 0.f;
@@ -204,7 +204,7 @@ void SigmaPoints::measureSigmaPoints () {
  */
 void SigmaPoints::propagateSigmaPoints() {
   if (_propagateFunc == NULL) {
-    THROW_ERR("SPoint : Invalid propagation function")
+    THROW_ERR("SPoint : Invalid propagation function");
   }
 
   // Propagate existing set of points (supposed to be representative)
@@ -311,7 +311,7 @@ void SigmaPoints::updateCov(const vector < MatrixXf > &sigma_points_1,
 
   // Deal with mistakes...
   if (mean_1.cols() != mean_2.cols()) {
-    THROW_ERR("SPoints : vectors have different sizes")
+    THROW_ERR("SPoints : vectors have different sizes");
   }
 
   // Compute inter-state covariance

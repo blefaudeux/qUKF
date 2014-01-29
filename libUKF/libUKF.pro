@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-TARGET = libUKF
+TARGET = UKF
 TEMPLATE = lib
 
 DEFINES += LIBUKF_LIBRARY

@@ -3,8 +3,8 @@
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
- *  @file sigma_point.cpp
- *  @brief Implements a class of sigma points, to be used with UKF
+ *  @file statistic_tools.cpp
+ *  @brief Some tools to be used here and there..
  *  @version 1.0
  *  @date 12-11-2013
  */

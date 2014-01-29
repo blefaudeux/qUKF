@@ -35,7 +35,7 @@ class MotionEstimation
      * \param ukf_alpha
      * \param ukf_beta
      */
-    MotionEstimation(const float *speed,
+    MotionEstimation(const float *variable,
                      const float ukf_measure_noise,
                      const float ukf_process_noise,
                      const float ukf_kappa);
