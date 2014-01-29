@@ -1,7 +1,12 @@
 #include "motion_filtering.h"
 
 /*
- *  @author benjamin.lefaudeux@inria.fr
+ *  @license GPL
+ *  @author Benjamin Lefaudeux (blefaudeux at github)
+ *  @file motion_filtering.cpp
+ *  @brief Defines an instance of UKF filtering
+ *  @version 1.0
+ *  @date 12-11-2013
  */
 
 
@@ -86,7 +91,7 @@ void meas_q_function(const Quaternionf &q_in, Quaternionf &q_measured) {
  * \param pos
  * \param speed
  */
-MotionEstimation::MotionEstimation(const float *speed,
+MotionEstimation::MotionEstimation(const float *variable,
                                    const float ukf_measure_noise = 1.f,
                                    const float ukf_process_noise = 1.f,
                                    const float ukf_kappa = 0.5f) {
@@ -97,9 +102,9 @@ MotionEstimation::MotionEstimation(const float *speed,
   // - initial speed
 
   _measure.setZero (3,1);
-  _measure(0,0) = speed[0];
-  _measure(1,0) = speed[1];
-  _measure(2,0) = speed[2];
+  _measure(0,0) = variable[0];
+  _measure(1,0) = variable[1];
+  _measure(2,0) = variable[2];
 
   _initial_cov.setIdentity(3,3);
   _model_noise.setIdentity(3,3);
@@ -255,7 +260,7 @@ void MotionEstimation::update(const float *speed,
 
   if ((_measure_latest.rows () != 6) ||
       (!_filter_angular_speed)){
-    THROW_ERR("Motion filtering : filter initialization went wrong")
+    THROW_ERR("Motion filtering : filter initialization went wrong");
   }
 
   // Get latest updated state :

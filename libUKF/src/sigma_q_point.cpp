@@ -3,8 +3,8 @@
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
- *  @file sigma_point.cpp
- *  @brief Implements a class of sigma points, to be used with UKF
+ *  @file sigma_q_point.cpp
+ *  @brief Implements a class of sigma points, to be used with UKF. Points are quaternions in this case !
  *  @version 1.0
  *  @date 12-11-2013
  */
@@ -25,7 +25,7 @@ SigmaQPoints::SigmaQPoints(const Matrix<float, 3, 1> &angles_mean,
   _st_tool = new statisticTools();
 
   // Reset a few matrices..
-  _process_noise.setZero ();
+  _process_noise.setZero (3, 3);
 }
 
 
@@ -66,7 +66,7 @@ void SigmaQPoints::averageQuaternionsSlerp(const vector <Quaternionf, aligned_al
   // We use the slerp interpolation to get the average quaternion best describing
   // a set of quaternions
   if (q_list.size () != q_weight.size ()) {
-    THROW_ERR("Error averaging quaternions, \n weights and quaternion lists have different size")
+    THROW_ERR("Error averaging quaternions, \n weights and quaternion lists have different size");
   }
 
   if (q_list.size () == 0) {
@@ -99,7 +99,7 @@ void SigmaQPoints::averageQuaternionsAngleAxis(const vector <Quaternionf, aligne
                                                Quaternionf  &q_avg) {
 
   if (q_list.size () != q_weight.size ()) {
-    THROW_ERR("Error averagin quaternions, weights and quaternions lists have different sizes !")
+    THROW_ERR("Error averagin quaternions, weights and quaternions lists have different sizes !");
   }
 
   AngleAxis <float> vec_mean;
@@ -152,7 +152,7 @@ void SigmaQPoints::averageQuaternionsIterative(const vector <Quaternionf, aligne
   // See http://en.wikipedia.org/wiki/Generalized_quaternion_interpolation
 
   if (q_list.size () != q_weight.size ()) {
-    THROW_ERR("Error averagin quaternions, weights and quaternions lists have different sizes !")
+    THROW_ERR("Error averagin quaternions, weights and quaternions lists have different sizes !");
   }
 
   vector < AngleAxis<float> > err_aa_vector;
@@ -415,7 +415,7 @@ void SigmaQPoints::pickMeanQuaternion(const vector<Quaternionf, aligned_allocato
                                       Quaternionf *mean_quaternion) {
 
   if (q_list.size () != q_weight.size ()) {
-    THROW_ERR("Error averaging quaternions, \n weights and quaternion lists have different size")
+    THROW_ERR("Error averaging quaternions, \n weights and quaternion lists have different size");
   }
 
   float dist_min = 10e100, dist = 0;
@@ -515,7 +515,7 @@ void SigmaQPoints::setState(const MatrixXf &mean,
  */
 void SigmaQPoints::projectSigmaQPoints() {
   _sigma_pt.clear();
-  int i = 0;
+  unsigned int i = 0;
 
   // Get angles back from the quaternions and get the tail values for sigma_meas_points
   i = 0;

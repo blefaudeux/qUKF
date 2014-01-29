@@ -4,11 +4,10 @@
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
  *  @file unscented_KF.cpp
- *  @brief Implements a class of sigma points, to be used with UKF
+ *  @brief Implements UKF filter
  *  @version 1.0
  *  @date 12-11-2013
  */
-
 
 UKF::UKF(const MatrixXf &initial_state,
          const MatrixXf &initial_cov,
