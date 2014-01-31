@@ -11,23 +11,42 @@ file(GLOB HEADERS ${PROJECT_SOURCE_DIR}/headers/*.h)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/headers)
 
-set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
-
-if(NOT EIGEN3_INCLUDE_DIR )
-  # Try to manually define Eigen location
-  set(ENV{EIGEN3_INCLUDE_DIR} "/usr/include/eigen3/")
+# Try to find the needed packages
+find_package(Boost REQUIRED)
+find_package(eigen3)
+if(NOT eigen3_FOUND)
   set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
 
-  # Raise error if that's not enough
   if(NOT EIGEN3_INCLUDE_DIR )
-    message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
+    # Try to manually define Eigen location
+    set(ENV{EIGEN3_INCLUDE_DIR} "/usr/include/eigen3/")
+    set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
+
+    # Raise error if that's not enough
+    if(NOT EIGEN3_INCLUDE_DIR )
+      message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
+    endif()
+
+    include_directories( "${EIGEN3_INCLUDE_DIR}" )
   endif()
 endif()
 
-include_directories( "${EIGEN3_INCLUDE_DIR}" )
+# Set debug or release configurations
+if( CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]" )
+    message( "INFO: DEBUG BUILD" )
+    # for debug type builds, turn on verbose makefiles
+    SET(CMAKE_VERBOSE_MAKEFILE ON)
 
-# Try to find the needed packages
-find_package(Boost REQUIRED)
+    # Tell other CMake files that we're doing a debug build
+    SET( DEBUG_BUILD 1 )
+
+    # Tell C/C++ that we're doing a debug build
+    ADD_DEFINITIONS( -DDEBUG )
+endif()
+
+if( CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll][Ee][Aa][Ss][Ee]" )
+    message( "INFO: RELEASE BUILD" )
+endif()
 
 # Create static and dynamic libraries
 add_library (UKF_static STATIC ${SRC} ${HEADERS})
@@ -37,6 +56,6 @@ add_library (UKF_dynamic SHARED ${SRC} ${HEADERS})
 TARGET_LINK_LIBRARIES(UKF_static ${Boost_LIBRARIES} )
 TARGET_LINK_LIBRARIES(UKF_dynamic ${Boost_LIBRARIES} )
 
-## Define the installation procedure
-#install(TARGETS libUKF_dynamic libUKF_static DESTINATION lib)
-#install(FILES unscented_KF.h DESTINATION include)
+### Define the installation procedure
+install(TARGETS UKF_dynamic UKF_static DESTINATION ${PROJECT_SOURCE_DIR}/lib)
+install(FILES ${HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include)

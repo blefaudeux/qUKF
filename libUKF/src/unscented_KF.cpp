@@ -4,7 +4,7 @@
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
  *  @file unscented_KF.cpp
- *  @brief Implements UKF filter
+ *  @brief Implements a UKF filter with quaternions to filter angular positions
  *  @version 1.0
  *  @date 12-11-2013
  */
@@ -18,10 +18,10 @@ UKF::UKF(const MatrixXf &initial_state,
   _time_step = 1.f;
 
   b_first_time = true;
-  _particles = NULL;
-  _q_particles = NULL;
-  _propagateFunc = NULL;
-  _measurementFunc = NULL;
+  _particles        = NULL;
+  _q_particles      = NULL;
+  _propagateFunc    = NULL;
+  _measurementFunc  = NULL;
 
   if ((initial_state.cols () != 1)
       || (initial_cov.rows () != initial_state.rows ())
@@ -52,19 +52,19 @@ UKF::UKF(const MatrixXf &initial_state,
                    measurement_noise.cols ()) = measurement_noise;
 
   // Set _post values
-  k_state_post = k_state_pre;
-  k_cov_post = k_cov_pre;
+  k_state_post  = k_state_pre;
+  k_cov_post    = k_cov_pre;
 
   k_expected_cov.setIdentity (dim_ext, dim_ext);
 
-  k_process_noise = process_noise;
+  k_process_noise     = process_noise;
   k_measurement_noise = measurement_noise;
 
   k_cov_cross_pred_meas.setZero (dim_ext, dim_ext);
   k_cov_cross_pred_ref.setZero (dim_ext, dim_ext);
 
   k_gain.setZero (dim_ext, dim_ext);
-  k_innovation.setZero(dim_ext, 1);
+  k_innovation.setZero (dim_ext, 1);
 
   _kappa = kappa;
 
@@ -262,7 +262,6 @@ void UKF::predict() {
 
     // Add the correlations between state errors and process noise :
     // TODO
-
     _particles->setState (k_state_post,
                           k_cov_post);
   }
@@ -349,10 +348,6 @@ void UKF::propagateSigmaPoints() {
       THROW_ERR("UKF : Propagation function must be defined before propagating sigma points");
     }
     _particles->setPropagationFunction (_propagateFunc);
-
-#ifdef DEBUG_LINUX
-    printf("UKF : propagate sigma points\n");
-#endif
     _particles->propagateSigmaPoints ();
   } else {
     _particles->propagateSigmaPoints ();
@@ -363,25 +358,16 @@ void UKF::propagateSigmaPoints() {
  * \brief propagateSigmaQPoints according to the recorded motion model
  */
 void UKF::propagateSigmaQPoints() {
-#ifdef DEBUG_LINUX
-    printf("UKF : Propagate sigma Q points\n");
-#endif
-
   if (b_first_time) {
     printf("UKF : set propagation function and propagate sigma Q points\n");
     if (_propagateQFunc == NULL) {
       THROW_ERR("UKF : Quaternions propagation function must be defined before propagating sigma points");
     }
     _q_particles->setPropagationFunction (_propagateQFunc);
-
     _q_particles->propagateSigmaQPoints ();
   } else {
     _q_particles->propagateSigmaQPoints ();
   }
-
-#ifdef DEBUG_LINUX
-  printf("UKF : Update Q mean and cov values\n");
-#endif
 
   _q_particles->computeQMeanAndCovariance(20, 0.001f);
   // TODO: set the number of iterations as a parameter
@@ -561,6 +547,9 @@ void UKF::updateParticles (const MatrixXf &new_measure) {
   k_cov_post    = k_cov_pre -
       k_gain * k_cov_extended * k_gain.transpose(); // State and measurement space are the same, for now..
 
+#ifdef DEBUG
+  cout << "\nCorrected state : \n" << k_state_post.block(0,0,6,1) << endl << "***********************" << endl;
+#endif
 
 #ifdef DEBUG_LINUX
   printf("k_innovation : \n");

@@ -25,7 +25,7 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
   _dim   = mean.rows ();
 
 #ifdef DEBUG
-  printf("Sigma points : dimensions %d x %d\n", mean.rows (), mean.cols ());
+  printf("Sigma points : dimensions %i x %i\n", mean.rows (), mean.cols ());
 #endif
 
   _mean_reference   = mean;
@@ -71,10 +71,10 @@ void SigmaPoints::computeSigmaPoints () {
   LLT <MatrixXf> lltOfCov(_cov_reference);
   MatrixXf L = lltOfCov.matrixL ();
 
-#ifdef DEBUG
-  printf("Square root matrix : \n");
-  printEigenMatrix(L);
-#endif
+//#ifdef DEBUG
+//  printf("Square root matrix : \n");
+//  printEigenMatrix(L);
+//#endif
 
   // Distributed points..
   for (int i=1; i<=_dim; ++i) {
@@ -165,14 +165,13 @@ void SigmaPoints::measureSigmaPoints () {
   _cov_measure.setZero (_dim, _dim);
   _weight = 0.f;
 
-#ifdef DEBUG
-  printf("Measure sigma_points : \n");
-  printEigenVector(_point_measure);
+//#ifdef DEBUG
+//  printf("Measure sigma_points : \n");
+//  printEigenVector(_point_measure);
 
-  printf("Mean measure : \n");
-  printEigenMatrix(_mean_measure);
-#endif
-
+//  printf("Mean measure : \n");
+//  printEigenMatrix(_mean_measure);
+//#endif
 
   for (unsigned int i=0; i<_point_measure.size (); ++i) {
     _cov_measure += _weight_cov[i] * ((_point_measure[i] - _mean_measure)
@@ -217,8 +216,7 @@ void SigmaPoints::propagateSigmaPoints() {
   }
 
 #ifdef DEBUG
-  printf("\nInitial mean :\n");
-  printEigenMatrix(_mean_reference);
+  cout << "\nInitial mean :\n" << _mean_reference.block(0,0,6,1) << endl;
 #endif
 
   // Update statistics
@@ -238,8 +236,7 @@ void SigmaPoints::propagateSigmaPoints() {
              _cov_cross_pred_state);
 
 #ifdef DEBUG
-  printf("Predicted mean :\n");
-  printEigenMatrix(_mean_predicted);
+  cout << "\nPredicted mean :\n" << _mean_predicted.block(0,0,6,1) << endl;
 #endif
 }
 
