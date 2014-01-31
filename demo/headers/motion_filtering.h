@@ -71,7 +71,14 @@ class MotionEstimation
      * \brief Get the estimated state from the filter
      * \param state_out
      */
-    void getLatestSate(float *state_out) const;
+    void getLatestState(float *state_out) const;
+
+    /*!
+     * \brief Get the estimated state from the filter
+     * \param state_out
+     */
+    void getPropagatedState(float *state_out) const;
+
 
     /*!
      * \brief Predict a new state from the previous estimation
@@ -90,7 +97,7 @@ class MotionEstimation
                                 const float ukf_process_noise,
                                 const float ukf_process_q_noise);
 
-    void update(const float *speed);
+    void update(const float *variable);
 
     void update(const float *speed,
                 const float *angular_speed);

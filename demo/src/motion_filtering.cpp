@@ -28,11 +28,6 @@ void pointPropagation_speed(const MatrixXf &points_in, MatrixXf &points_out) {
 
   points_out.resizeLike(points_in);
   points_out = prop_matrix * points_in;
-
-//  cout << "Propagated points : \n" << points_in << "\n" << points_out << endl;
-
-  points_out.resizeLike(points_in);
-  points_out = points_in;
 }
 
 void pointPropagation_angularSpeed(const Quaternionf &q_in, Quaternionf &q_out) {
@@ -112,7 +107,7 @@ MotionEstimation::MotionEstimation(const float *variable,
 
   _initial_cov.setIdentity(6,6);
   _model_noise.setIdentity(6,6);
-  _measurement_noise.setIdentity(3,3);
+  _measurement_noise.setIdentity(6,6);
 
   _initial_cov *= 1.f;
   _model_noise *= ukf_process_noise;
@@ -251,10 +246,17 @@ void MotionEstimation::setMeasurementSettings(const float ukf_measure_noise,
  * \brief MotionEstimation::update
  * \param speed
  */
-void MotionEstimation::update(const float *speed) {
-  _measure_latest(0,0) = speed[0];
-  _measure_latest(1,0) = speed[1];
-  _measure_latest(2,0) = speed[2];
+void MotionEstimation::update(const float *variable) {
+  _measure_latest(0,0) = variable[0];
+  _measure_latest(1,0) = variable[1];
+  _measure_latest(2,0) = variable[2];
+  _measure_latest(3,0) = variable[3];
+  _measure_latest(4,0) = variable[4];
+  _measure_latest(5,0) = variable[5];
+
+#ifdef DEBUG
+  cout << "\nNew measure\n" << _measure_latest << endl;
+#endif
 
   filter->update(_measure_latest);
 }
@@ -289,18 +291,18 @@ void MotionEstimation::predict() {
   filter->predict();
 }
 
-void MotionEstimation::getLatestSate(float *state_out) const{
+void MotionEstimation::getLatestState(float *state_out) const{
 
   Eigen::MatrixXf new_state;
 
   if (!_filter_angular_speed) {
-    new_state.resize (3,1);
-
     filter->getStatePost (new_state);
 
-    state_out[0] = new_state(0,0);
-    state_out[1] = new_state(1,0);
-    state_out[2] = new_state(2,0);
+    // TODO: memcpy and not a crappy loop..
+    for (unsigned int i=0; i<new_state.rows(); ++i) {
+        state_out[i] = new_state(i,0);
+      }
+
   } else {
     new_state.resize (6,1);
 
@@ -313,6 +315,31 @@ void MotionEstimation::getLatestSate(float *state_out) const{
     state_out[3] = new_state(3,0);  // Angular values
     state_out[4] = new_state(4,0);
     state_out[5] = new_state(5,0);
+  }
+}
 
+void MotionEstimation::getPropagatedState(float *state_out) const{
+
+  Eigen::MatrixXf new_state;
+
+  if (!_filter_angular_speed) {
+    filter->getStatePre(new_state);
+
+    // TODO: memcpy and not a crappy loop..
+    for (unsigned int i=0; i<new_state.rows(); ++i) {
+        state_out[i] = new_state(i,0);
+      }
+  } else {
+    new_state.resize (6,1);
+
+    filter->getStatePost (new_state);
+
+    state_out[0] = new_state(0,0);  // Speed
+    state_out[1] = new_state(1,0);
+    state_out[2] = new_state(2,0);
+
+    state_out[3] = new_state(3,0);  // Angular values
+    state_out[4] = new_state(4,0);
+    state_out[5] = new_state(5,0);
   }
 }
