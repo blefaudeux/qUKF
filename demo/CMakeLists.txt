@@ -26,10 +26,10 @@ if(NOT eigen3_FOUND)
     # Raise error if that's not enough
     if(NOT EIGEN3_INCLUDE_DIR )
       message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
-    endif()
-
-    include_directories( "${EIGEN3_INCLUDE_DIR}" )
+    endif()  
   endif()
+  include_directories(${EIGEN3_INCLUDE_DIR})
+  MESSAGE("Eigen path : ${EIGEN3_INCLUDE_DIR}\n")
 endif()
 
 find_package( OpenCV REQUIRED )
