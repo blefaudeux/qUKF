@@ -1,3 +1,0 @@
-/home/benjamin/Git/qUKF/build/libUKF/CMakeFiles/UKF_dynamic.dir
-/home/benjamin/Git/qUKF/build/libUKF/CMakeFiles/UKF_static.dir
-/home/benjamin/Git/qUKF/build/demo/CMakeFiles/demo.dir
