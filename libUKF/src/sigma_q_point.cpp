@@ -482,7 +482,7 @@ void SigmaQPoints::setMeasurementFunction(void (*meas_function)(const Quaternion
 }
 
 void SigmaQPoints::setProcessNoise(const MatrixXf &process_noise) {
-  printf("Quaternions : set process noise %d x %d\n",
+  printf("Quaternions : set process noise %li x %li\n",
          process_noise.rows (),
          process_noise.cols ());
 

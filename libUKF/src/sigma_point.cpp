@@ -25,7 +25,7 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
   _dim   = mean.rows ();
 
 #ifdef DEBUG
-  printf("Sigma points : dimensions %i x %i\n", mean.rows (), mean.cols ());
+  printf("Sigma points : dimensions %li x %li\n", mean.rows (), mean.cols ());
 #endif
 
   _mean_reference   = mean;
@@ -71,10 +71,9 @@ void SigmaPoints::computeSigmaPoints () {
   LLT <MatrixXf> lltOfCov(_cov_reference);
   MatrixXf L = lltOfCov.matrixL ();
 
-//#ifdef DEBUG
-//  printf("Square root matrix : \n");
-//  printEigenMatrix(L);
-//#endif
+#ifdef DEBUG
+  cout << "Square root matrix : \n" << L << endl;
+#endif
 
   // Distributed points..
   for (int i=1; i<=_dim; ++i) {
