@@ -1,0 +1,2 @@
+/usr/bin/ar cr libUKF_static.a  CMakeFiles/UKF_static.dir/src/sigma_point.cpp.o CMakeFiles/UKF_static.dir/src/eigen_tools.cpp.o CMakeFiles/UKF_static.dir/src/sigma_q_point.cpp.o CMakeFiles/UKF_static.dir/src/statistic_tools.cpp.o CMakeFiles/UKF_static.dir/src/unscented_KF.cpp.o
+/usr/bin/ranlib libUKF_static.a

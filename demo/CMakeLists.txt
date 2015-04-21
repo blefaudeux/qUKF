@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.6)
 # Make sure the compiler can find include files from our UKF library. 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/headers)
-include_directories(${PROJECT_SOURCE_DIR}/../libUKF/include)
+include_directories(${PROJECT_SOURCE_DIR}/../libUKF/headers)
 include_directories(${PROJECT_SOURCE_DIR}/../libUKF/lib)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
