@@ -2,6 +2,19 @@
 #include <highgui.h>
 #include <motion_filtering.h>
 
+void draw(IplImage *image,
+          const float *measurements,
+          const float *filtered_state,
+          const float *predicted_state) {
+
+    cvDrawCircle(image,cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
+    cvDrawCircle(image,cvPoint(filtered_state[0],filtered_state[1]),2,cvScalar(0,255,0),2);
+
+    // Show the predicted motion vector (?)
+    cvDrawLine(image, cvPoint(filtered_state[0],filtered_state[1]), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
+  }
+
+
 int main() {
 
   // Deal with the OpenCV window..
@@ -10,6 +23,9 @@ int main() {
   unsigned int height  = 800;
 
   int n_targets = 5;
+
+  // vector<vector<float[2]> > vec_poses;
+  // vec_poses.resize(5);
 
   IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
@@ -25,10 +41,7 @@ int main() {
 
   // Track the circling targets
   float measurements[6] = {0,0,0,0,0,0};
-  float filtered_state[6];
-  float predicted_state[6];
-  float previous_state[6];
-
+  float filtered_state[6], predicted_state[6], previous_state[6];
 
   for(;;angle += 0.01) {
       cvZero(image);
@@ -56,16 +69,11 @@ int main() {
           // Get the filtered state :
           motion_estimators[i]->getLatestState(filtered_state);
 
+          //vec_poses[i].push_back({filtered_state[0], filtered_state[1]});
+
           // Draw both the noisy input and the filtered state :
-          cvDrawCircle(image,cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
-          cvDrawCircle(image,cvPoint(filtered_state[0],filtered_state[1]),2,cvScalar(0,255,0),2);
-
-          // Show the predicted motion vector (?)
-          cvDrawLine(image, cvPoint(filtered_state[0],filtered_state[1]), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
-
-          // TODO: Show the past positions over time, nicely if possible..
+          draw(image, measurements, filtered_state, predicted_state);
         }
-
 
       // Show this stuff
       cvShowImage("image",image);
