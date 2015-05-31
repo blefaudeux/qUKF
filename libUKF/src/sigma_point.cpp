@@ -1,5 +1,5 @@
 #include "sigma_point.h"
-
+#include <stdio.h>
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
@@ -17,16 +17,11 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
    * Copy distribution parameters
    */
 
-  if ( (mean.rows () != cov.cols ()) ||
-       cov.cols () != cov.rows ()) {
-    THROW_ERR("SPoint : Could not create sigma points, matrix sizes do not match");
+  if ( (mean.rows () != cov.cols ()) || cov.cols () != cov.rows ()) {
+    std::fprintf(stderr, "SPoint : Could not create sigma points, matrix sizes do not match");
   }
 
   _dim   = mean.rows ();
-
-#ifdef DEBUG
-  printf("Sigma points : dimensions %li x %li\n", mean.rows (), mean.cols ());
-#endif
 
   _mean_reference   = mean;
 
@@ -37,9 +32,7 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
 
   _kappa  = kappa;
 
-  /*
-   * Create sigma points distribution (Unscented Transform)
-   */
+  // Create sigma points distribution (Unscented Transform)
   computeSigmaPoints ();
 
   _propagateFunc = NULL;

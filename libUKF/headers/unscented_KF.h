@@ -3,6 +3,7 @@
 
 #include "sigma_point.h"
 #include "sigma_q_point.h"
+#include <memory>
 
 using namespace Eigen;
 
@@ -162,59 +163,9 @@ class UKF
     void setMeasurementQFunction(void (*_meas_function)(const Quaternionf &, Quaternionf &));
 
   private :
-    bool  b_first_time;
-    bool  b_use_quaternions;
-
-    int   _dim;
-    int   _dim_q;
-
-    float _time_step;
-    float _kappa, _kappa_q;
-
-    /*
-     *  State vector includes (excepting quaternions)
-     *  x/y/z           - position
-     *  x°/y°/z°        - linear speed
-     *  w_x / w_y / w_z - rotation rate
-     *  theta/phi/psi   - angular position (possibly absent, depending on quaternions)
-     */
-    MatrixXf  k_process_noise;
-    MatrixXf  k_measurement_noise;
-
-    MatrixXf  k_gain;
-    MatrixXf  k_innovation;
-    MatrixXf  k_expected_cov;
-
-    MatrixXf  k_state_pre;
-    MatrixXf  k_state_post;
-    MatrixXf  k_state_meas;
-
-    MatrixXf  k_cov_pre;
-    MatrixXf  k_cov_post;
-    MatrixXf  k_cov_meas;
-    MatrixXf  k_cov_extended;
-    MatrixXf  k_cov_cross_pred_meas;
-    MatrixXf  k_cov_cross_pred_ref;
-
-
-    MatrixXf  k_cross_corr;
-    MatrixXf  k_measure_extended;
-
-    /* Same matrices needed for quaternion stuff */
-    Vector3f  k_state_q_pre;
-    Vector3f  k_state_q_post;
-    Matrix3f  k_cov_q_pre;
-    Matrix3f  k_cov_q_post;
-    Matrix3f  k_process_q_noise;
-    Matrix3f  k_measurement_q_noise;
-
-
     /*
      * Sigma_points : in vector, measure and quaternions space
      */
-    SigmaPoints *_particles;
-    SigmaQPoints *_q_particles;
-
     void (*_propagateFunc)(const MatrixXf &, MatrixXf &);
 
     void (*_measurementFunc)(const MatrixXf &, MatrixXf &);
@@ -260,6 +211,56 @@ class UKF
      * \param new_measure
      */
     void updateQParticles(const MatrixXf &new_angular_measure);
+
+  private :
+    bool  b_first_time;
+    bool  b_use_quaternions;
+
+    int   m_dim;
+    int   m_dim_q;
+
+    float m_time_step;
+    float m_kappa, m_kappa_q;
+
+    std::unique_ptr<SigmaPoints> m_particles;
+    std::unique_ptr<SigmaQPoints> m_q_particles;
+
+    /*
+     *  State vector includes (excepting quaternions)
+     *  x/y/z           - position
+     *  x°/y°/z°        - linear speed
+     *  w_x / w_y / w_z - rotation rate
+     *  theta/phi/psi   - angular position (possibly absent, depending on quaternions)
+     */
+    MatrixXf  k_process_noise;
+    MatrixXf  k_measurement_noise;
+
+    MatrixXf  k_gain;
+    MatrixXf  k_innovation;
+    MatrixXf  k_expected_cov;
+
+    MatrixXf  k_state_pre;
+    MatrixXf  k_state_post;
+    MatrixXf  k_state_meas;
+
+    MatrixXf  k_cov_pre;
+    MatrixXf  k_cov_post;
+    MatrixXf  k_cov_meas;
+    MatrixXf  k_cov_extended;
+    MatrixXf  k_cov_cross_pred_meas;
+    MatrixXf  k_cov_cross_pred_ref;
+
+
+    MatrixXf  k_cross_corr;
+    MatrixXf  k_measure_extended;
+
+    /* Same matrices needed for quaternion stuff */
+    Vector3f  k_state_q_pre;
+    Vector3f  k_state_q_post;
+    Matrix3f  k_cov_q_pre;
+    Matrix3f  k_cov_q_post;
+    Matrix3f  k_process_q_noise;
+    Matrix3f  k_measurement_q_noise;
 };
 
 #endif // QKALMANFILTER_H

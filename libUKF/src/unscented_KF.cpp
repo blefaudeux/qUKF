@@ -15,11 +15,11 @@ UKF::UKF(const MatrixXf &initial_state,
          const MatrixXf &measurement_noise,
          float kappa)  {
 
-  _time_step = 1.f;
+  m_time_step = 1.f;
 
   b_first_time = true;
-  _particles        = NULL;
-  _q_particles      = NULL;
+  m_particles.reset();
+  m_q_particles.reset();
   _propagateFunc    = NULL;
   _measurementFunc  = NULL;
 
@@ -37,17 +37,17 @@ UKF::UKF(const MatrixXf &initial_state,
       + process_noise.rows ()
       + measurement_noise.rows ();
 
-  _dim = initial_state.rows ();
+  m_dim = initial_state.rows ();
 
   // Initialize matrices --> extended state taking noises into account
   k_state_pre.setZero (dim_ext, 1);
   k_state_pre.block (0,0, initial_state.rows (), 1) = initial_state;
 
   k_cov_pre.setZero (dim_ext, dim_ext);
-  k_cov_pre.block (0,0, _dim, _dim) = initial_cov;
-  k_cov_pre.block (_dim,_dim, process_noise.cols (), process_noise.cols ()) = process_noise;
-  k_cov_pre.block (_dim + process_noise.cols (),
-                   _dim + process_noise.cols (),
+  k_cov_pre.block (0,0, m_dim, m_dim) = initial_cov;
+  k_cov_pre.block (m_dim,m_dim, process_noise.cols (), process_noise.cols ()) = process_noise;
+  k_cov_pre.block (m_dim + process_noise.cols (),
+                   m_dim + process_noise.cols (),
                    measurement_noise.cols (),
                    measurement_noise.cols ()) = measurement_noise;
 
@@ -66,7 +66,7 @@ UKF::UKF(const MatrixXf &initial_state,
   k_gain.setZero (dim_ext, dim_ext);
   k_innovation.setZero (dim_ext, 1);
 
-  _kappa = kappa;
+  m_kappa = kappa;
 
   // Standard "vector space" UKF, no quaternions
   b_use_quaternions = false;
@@ -84,11 +84,12 @@ UKF::UKF(const MatrixXf &initial_state,
          float kappa,
          float kappa_q)  {
 
-  _time_step = 1.f;
+  m_time_step = 1.f;
 
   b_first_time = true;
-  _particles = NULL;
-  _q_particles = NULL;
+  m_particles.reset();
+  m_q_particles.reset();
+
   _propagateFunc = NULL;
   _measurementFunc = NULL;
   _propagateQFunc = NULL;
@@ -111,7 +112,7 @@ UKF::UKF(const MatrixXf &initial_state,
       + process_noise.rows ()
       + measurement_noise.rows ();
 
-  _dim = initial_state.rows ();
+  m_dim = initial_state.rows ();
 
   //Initialize matrices
   //  --> extended state taking noises into account
@@ -120,16 +121,16 @@ UKF::UKF(const MatrixXf &initial_state,
   k_state_pre.block (0,0, initial_state.rows (), 1) = initial_state;
 
   k_cov_pre.setZero (dim_ext, dim_ext);
-  k_cov_pre.block (0,0, _dim, _dim) = initial_cov;
-  k_cov_pre.block (_dim,_dim, process_noise.cols (), process_noise.cols ()) = process_noise;
-  k_cov_pre.block (_dim + process_noise.cols (),
-                   _dim + process_noise.cols (),
+  k_cov_pre.block (0,0, m_dim, m_dim) = initial_cov;
+  k_cov_pre.block (m_dim,m_dim, process_noise.cols (), process_noise.cols ()) = process_noise;
+  k_cov_pre.block (m_dim + process_noise.cols (),
+                   m_dim + process_noise.cols (),
                    measurement_noise.cols (),
                    measurement_noise.cols ()) = measurement_noise;
 
   // Initialize quaternions matrices
   // TODO : check initial dimensions
-  _dim_q = initial_q_state.rows ();
+  m_dim_q = initial_q_state.rows ();
 
   k_state_q_pre = initial_q_state;
 
@@ -157,20 +158,14 @@ UKF::UKF(const MatrixXf &initial_state,
   k_process_q_noise = process_q_noise;
   k_measurement_q_noise = measurement_q_noise;
 
-  _kappa    = kappa;
-  _kappa_q  = kappa_q;
+  m_kappa    = kappa;
+  m_kappa_q  = kappa_q;
 
   b_use_quaternions = true;
 }
 
 UKF::~UKF() {
-  if (_particles != NULL) {
-    delete _particles;
-  }
-
-  if (_q_particles != NULL) {
-    delete _q_particles;
-  }
+    // Nothing to do, smart pointers should go out of scope
 }
 
 
@@ -202,22 +197,22 @@ void UKF::computeKalmanGain(const MatrixXf &cross_correlation,
 void UKF::getStatePre(MatrixXf &state_pre) const {
 
   if (!b_use_quaternions) {
-    state_pre = k_state_pre.block(0,0, _dim, 1); // Only get the estimated variables, no noise elements
+    state_pre = k_state_pre.block(0,0, m_dim, 1); // Only get the estimated variables, no noise elements
   }
   else {
-    state_pre.resize (_dim + k_state_q_pre.rows (), 1);
-    state_pre.block(0,0,_dim, 1) = k_state_pre.block(0,0, _dim, 1);
-    state_pre.block(_dim,0,k_state_q_pre.rows (), 1) = k_state_q_pre;
+    state_pre.resize (m_dim + k_state_q_pre.rows (), 1);
+    state_pre.block(0,0,m_dim, 1) = k_state_pre.block(0,0, m_dim, 1);
+    state_pre.block(m_dim,0,k_state_q_pre.rows (), 1) = k_state_q_pre;
   }
 }
 
 void UKF::getStatePost(MatrixXf &state_post) const {
   if (!b_use_quaternions) {
-    state_post = k_state_post.block(0,0, _dim, 1);
+    state_post = k_state_post.block(0,0, m_dim, 1);
   } else {
-    state_post.resize (_dim + k_state_q_post.rows (), 1);
-    state_post.block(0,0,_dim, 1) = k_state_post.block(0,0, _dim, 1);
-    state_post.block(_dim,0,k_state_q_post.rows (), 1) = k_state_q_post;
+    state_post.resize (m_dim + k_state_q_post.rows (), 1);
+    state_post.block(0,0,m_dim, 1) = k_state_post.block(0,0, m_dim, 1);
+    state_post.block(m_dim,0,k_state_q_post.rows (), 1) = k_state_q_post;
   }
 
 #ifdef DEBUG_LINUX
@@ -231,19 +226,17 @@ void UKF::predict() {
    * Compute sigma points from mean and cov
    * (Unscented Transform http://en.wikipedia.org/wiki/Unscented_transform)
    */
-  if (_particles == NULL) {
-    _particles = new SigmaPoints(k_state_post,
-                                 k_cov_post,
-                                 _kappa);
+  if (!m_particles) {
+    m_particles.reset( new SigmaPoints(k_state_post, k_cov_post, m_kappa));
 
     // If a propagation function has not been defined, declare it
     if (_propagateFunc != NULL) {
-      _particles->setPropagationFunction (_propagateFunc);
+      m_particles->setPropagationFunction (_propagateFunc);
     }
 
     // .. Same for our measurement function
     if (_measurementFunc != NULL) {
-      _particles->setMeasurementFunction (_measurementFunc);
+      m_particles->setMeasurementFunction (_measurementFunc);
     }
   } else {
     /*
@@ -251,18 +244,18 @@ void UKF::predict() {
      */
 
     // Add the measurement noise and the process noise to the cov matrix :
-    k_cov_post.block (_dim,_dim,
+    k_cov_post.block (m_dim,m_dim,
                       k_process_noise.cols (),
                       k_process_noise.cols ()) = k_process_noise;
 
-    k_cov_post.block (_dim + k_process_noise.cols (),
-                      _dim + k_process_noise.cols (),
+    k_cov_post.block (m_dim + k_process_noise.cols (),
+                      m_dim + k_process_noise.cols (),
                       k_measurement_noise.cols (),
                       k_measurement_noise.cols ()) = k_measurement_noise;
 
     // Add the correlations between state errors and process noise :
     // TODO
-    _particles->setState (k_state_post,
+    m_particles->setState (k_state_post,
                           k_cov_post);
   }
 
@@ -271,7 +264,7 @@ void UKF::predict() {
 
 
   // Fill in predicted state from propagated sigma-points
-  _particles->getPredictedState(k_state_pre,
+  m_particles->getPredictedState(k_state_pre,
                                 k_cov_pre,
                                 k_cov_cross_pred_ref);
 
@@ -284,7 +277,7 @@ void UKF::predict() {
    * (Unscented Transform http://en.wikipedia.org/wiki/Unscented_transform)
    */
   if (b_use_quaternions) {
-    if (_q_particles == NULL) {
+    if (!m_q_particles) {
 
 #ifdef DEBUG_LINUX
       printf("UKF : Allocate q_sigma points\n");
@@ -292,29 +285,29 @@ void UKF::predict() {
 
       cout << k_state_q_post << endl << endl << k_cov_q_post << endl << endl;
 
-      _q_particles = new SigmaQPoints(k_state_q_post.block(0,0, 3,1),
-                                      k_cov_q_post.block(0,0, 3,3),
-                                      _kappa_q);
+      m_q_particles.reset( new SigmaQPoints(k_state_q_post.block(0,0, 3,1),
+                                            k_cov_q_post.block(0,0, 3,3),
+                                            m_kappa_q) );
 
-      _q_particles->setProcessNoise (k_process_q_noise);
+      m_q_particles->setProcessNoise (k_process_q_noise);
 
       // If a propagation function has not been defined, declare it
       if (_propagateQFunc != NULL) {
         printf("UKF : Set propagation Q function\n");
-        _q_particles->setPropagationFunction (_propagateQFunc);
+        m_q_particles->setPropagationFunction (_propagateQFunc);
       }
 
       // .. Same for our measurement function
       if (_measurementQFunc != NULL) {
         printf("UKF : Set measurement Q function\n");
-        _q_particles->setMeasurementFunction (_measurementQFunc);
+        m_q_particles->setMeasurementFunction (_measurementQFunc);
       }
 
     }
     else {
       // Rmk : process noise is already added to the covariance estimation inside the
       // sigma quaternions
-      _q_particles->setState (k_state_q_post,
+      m_q_particles->setState (k_state_q_post,
                               k_cov_q_post);
     }
 
@@ -322,7 +315,7 @@ void UKF::predict() {
     propagateSigmaQPoints ();
 
     // Get predicted state
-    _q_particles->getStatePre(k_state_q_pre,
+    m_q_particles->getStatePre(k_state_q_pre,
                               k_cov_q_pre);
   }
 
@@ -347,10 +340,10 @@ void UKF::propagateSigmaPoints() {
     if (_propagateFunc == NULL) {
       THROW_ERR("UKF : Propagation function must be defined before propagating sigma points");
     }
-    _particles->setPropagationFunction (_propagateFunc);
-    _particles->propagateSigmaPoints ();
+    m_particles->setPropagationFunction (_propagateFunc);
+    m_particles->propagateSigmaPoints ();
   } else {
-    _particles->propagateSigmaPoints ();
+    m_particles->propagateSigmaPoints ();
   }
 }
 
@@ -363,13 +356,13 @@ void UKF::propagateSigmaQPoints() {
     if (_propagateQFunc == NULL) {
       THROW_ERR("UKF : Quaternions propagation function must be defined before propagating sigma points");
     }
-    _q_particles->setPropagationFunction (_propagateQFunc);
-    _q_particles->propagateSigmaQPoints ();
+    m_q_particles->setPropagationFunction (_propagateQFunc);
+    m_q_particles->propagateSigmaQPoints ();
   } else {
-    _q_particles->propagateSigmaQPoints ();
+    m_q_particles->propagateSigmaQPoints ();
   }
 
-  _q_particles->computeQMeanAndCovariance(20, 0.001f);
+  m_q_particles->computeQMeanAndCovariance(20, 0.001f);
   // TODO: set the number of iterations as a parameter
 }
 
@@ -392,8 +385,8 @@ void UKF::setMeasurementNoise(const MatrixXf &measurement_noise) {
   k_measurement_noise = measurement_noise;
 
   // FIXME : dimension problem if k_cov is too small !
-  k_cov_pre.block (_dim + k_process_noise.cols (),
-                   _dim + k_process_noise.cols (),
+  k_cov_pre.block (m_dim + k_process_noise.cols (),
+                   m_dim + k_process_noise.cols (),
                    measurement_noise.cols (),
                    measurement_noise.cols ()) = measurement_noise;
 
@@ -404,28 +397,28 @@ void UKF::setMeasurementNoise(const MatrixXf &measurement_noise) {
 void UKF::setMeasurementFunction (void (*_meas_function)(const MatrixXf &, MatrixXf &)) {
   // Store the function pointer if no particles are yet allocated
   // else define particles propgation function
-  if(_particles == NULL) {
+  if(m_particles == NULL) {
     _measurementFunc = _meas_function;
   } else {
-    _particles->setMeasurementFunction (_meas_function);
+    m_particles->setMeasurementFunction (_meas_function);
   }
 }
 
 void UKF::setMeasurementQFunction (void (*_meas_function)(const Quaternionf &, Quaternionf &)) {
   // Store the function pointer if no particles are yet allocated
   // else define particles propgation function
-  if(_q_particles == NULL) {
+  if(m_q_particles == NULL) {
     _measurementQFunc = _meas_function;
   } else {
-    _q_particles->setMeasurementFunction (_meas_function);
+    m_q_particles->setMeasurementFunction (_meas_function);
   }
 }
 
 void UKF::setProcessNoise(const MatrixXf &process_noise) {
   k_process_noise = process_noise;
   // FIXME : dimension problem if k_cov is too small !
-  k_cov_pre.block (_dim,
-                   _dim,
+  k_cov_pre.block (m_dim,
+                   m_dim,
                    process_noise.cols (),
                    process_noise.cols ()) = process_noise;
 
@@ -445,22 +438,22 @@ void UKF::setMeasurementQNoise (const MatrixXf &measurement_q_noise) {
 void UKF::setPropagationFunction (void (*_prop_function)(const MatrixXf &, MatrixXf &)) {
   // Store the function pointer if no particles are yet allocated
   // else define particles propgation function
-  if(_particles == NULL) {
+  if(m_particles == NULL) {
     _propagateFunc = _prop_function;
   } else {
-    _particles->setPropagationFunction (_prop_function);
+    m_particles->setPropagationFunction (_prop_function);
   }
 }
 
 void UKF::setPropagationQFunction (void (*_prop_function) (const Quaternionf &, Quaternionf &)) {
 
-  if (_q_particles == NULL) {
+  if (m_q_particles == NULL) {
     // Sigma Q points not allocated yet --> store the function pointer
     _propagateQFunc = _prop_function;
 
   } else {
     // Sigma Q points allocated, define their propagation function
-    _q_particles->setPropagationFunction(_prop_function);
+    m_q_particles->setPropagationFunction(_prop_function);
   }
 }
 
@@ -471,7 +464,7 @@ void UKF::setPropagationQFunction (void (*_prop_function) (const Quaternionf &, 
  */
 void UKF::update (const MatrixXf &new_measure) {
   // Failsafe stupid tests
-  if (new_measure.rows () != _dim) {
+  if (new_measure.rows () != m_dim) {
     THROW_ERR("UKF : Wrong measure vector dimension\n");
   } else if (_measurementFunc == NULL) {
     THROW_ERR("UKF : Measurement function is not defined");
@@ -492,7 +485,7 @@ void UKF::update (const MatrixXf &new_measure) {
 void UKF::update (const MatrixXf &vec_measure, const MatrixXf &angle_measure) {
 
   // Failsafe stupid tests
-  if (vec_measure.rows () != _dim) {
+  if (vec_measure.rows () != m_dim) {
     THROW_ERR("UKF : Wrong measure vector dimension\n");
   } else if (_measurementFunc == NULL) {
     THROW_ERR("UKF : Measurement function is not defined");
@@ -513,9 +506,9 @@ void UKF::update (const MatrixXf &vec_measure, const MatrixXf &angle_measure) {
 void UKF::updateParticles (const MatrixXf &new_measure) {
 
   // Project on measurement space & Get expected measure
-  _particles->measureSigmaPoints ();
+  m_particles->measureSigmaPoints ();
 
-  _particles->getMeasuredState (k_state_meas,
+  m_particles->getMeasuredState (k_state_meas,
                                 k_cov_meas,
                                 k_cov_cross_pred_meas);
 

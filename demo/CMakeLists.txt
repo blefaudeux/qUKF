@@ -11,6 +11,10 @@ include_directories(${PROJECT_SOURCE_DIR}/../libUKF/lib)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+# GCC flags
+SET( GCC_COVERAGE_COMPILE_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
+
 # Try to find the needed packages
 find_package(Boost REQUIRED)
 
