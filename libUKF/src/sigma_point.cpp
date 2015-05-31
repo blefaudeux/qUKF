@@ -157,14 +157,6 @@ void SigmaPoints::measureSigmaPoints () {
   _cov_measure.setZero (_dim, _dim);
   _weight = 0.f;
 
-//#ifdef DEBUG
-//  printf("Measure sigma_points : \n");
-//  printEigenVector(_point_measure);
-
-//  printf("Mean measure : \n");
-//  printEigenMatrix(_mean_measure);
-//#endif
-
   for (unsigned int i=0; i<_point_measure.size (); ++i) {
     _cov_measure += _weight_cov[i] * ((_point_measure[i] - _mean_measure)
                                       * (_point_measure[i].transpose() - _mean_measure.transpose()));

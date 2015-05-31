@@ -32,11 +32,11 @@ int main() {
   // Instanciate the motion filters
   float poses[3] = {0,0,0};
 
-  MotionEstimation **motion_estimators;
-  motion_estimators = new MotionEstimation*[n_targets];
+  std::vector<MotionEstimation *> motion_estimators(n_targets);
 
-  for (unsigned int i=0; i<n_targets; ++i) {
-      motion_estimators[i] = new MotionEstimation(&poses[i], 1e3, 1.0, 0.05);
+  int i=0;
+  for (auto & motion_estimator :  motion_estimators) {
+      motion_estimator = new MotionEstimation(&poses[i++], 1e3, 1.0, 0.05);
     }
 
   // Track the circling targets
@@ -47,14 +47,14 @@ int main() {
       cvZero(image);
 
       // Create a new measurement for every target, and do the update
-      for (unsigned int i=0; i< n_targets; ++i) {
-          motion_estimators[i]->getLatestState(previous_state);
+      for (auto & motion_estimator : motion_estimators) {
+          motion_estimator->getLatestState(previous_state);
 
           // Propagate the previous state
-          motion_estimators[i]->predict();
+          motion_estimator->predict();
 
           // Get the predicted state :
-          motion_estimators[i]->getPropagatedState(predicted_state);
+          motion_estimator->getPropagatedState(predicted_state);
 
           // Update the state with a new noisy measurement :
           measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
@@ -64,12 +64,10 @@ int main() {
           measurements[3] = measurements[0] - previous_state[0];
           measurements[4] = measurements[1] - previous_state[1];
 
-          motion_estimators[i]->update(measurements);
+          motion_estimator->update(measurements);
 
           // Get the filtered state :
-          motion_estimators[i]->getLatestState(filtered_state);
-
-          //vec_poses[i].push_back({filtered_state[0], filtered_state[1]});
+          motion_estimator->getLatestState(filtered_state);
 
           // Draw both the noisy input and the filtered state :
           draw(image, measurements, filtered_state, predicted_state);
@@ -89,11 +87,9 @@ int main() {
 
   // Close everything and leave
   cvReleaseImage(&image);
-  for (int i=0; i<n_targets; ++i) {
-      delete motion_estimators[i];
+  for (auto & motion_estimator : motion_estimators) {
+      delete motion_estimator;
     }
-
-  delete []motion_estimators;
 
   return 1;
 }

@@ -118,10 +118,9 @@ MotionEstimation::MotionEstimation(const float *variable,
                    _initial_cov,
                    _model_noise,
                    _measurement_noise,
+                   &meas_function,
+                   &pointPropagation_speed,
                    ukf_kappa);
-
-  filter->setPropagationFunction (&pointPropagation_speed);
-  filter->setMeasurementFunction (&meas_function);
 
   _measure_latest = _measure;
   _filter_angular_speed = false;
@@ -192,14 +191,12 @@ MotionEstimation::MotionEstimation(const float *speed,
                    _model_q_noise,
                    _measurement_noise,
                    _measurement_q_noise,
+                   &meas_function,
+                   &pointPropagation_speed,
+                   &meas_q_function,
+                   &pointPropagation_angularSpeed,
                    ukf_kappa,
                    ukf_kappa_q);
-
-  filter->setPropagationFunction (&pointPropagation_speed);
-  filter->setMeasurementFunction (&meas_function);
-
-  filter->setMeasurementQFunction (&meas_q_function);
-  filter->setPropagationQFunction (&pointPropagation_angularSpeed);
 
   _measure_latest = _measure;
   _filter_angular_speed = true;
