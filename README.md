@@ -1,7 +1,7 @@
 qUKF
 ====
 
-An Eigen-based implementation of an UKF filter, allowing the use of quaternions to filter angles
+An Eigen-based implementation of an UKF filter, allowing the use of quaternions to filter angles. This removes singularities bound to appear if you feed your filter with ]-pi, pi] values, contrary to most of the UKF filters out there.
 
 
 ====
