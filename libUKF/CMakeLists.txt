@@ -53,13 +53,14 @@ if( CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll][Ee][Aa][Ss][Ee]" )
 endif()
 
 # Create static and dynamic libraries
-add_library (UKF_static STATIC ${SRC} ${HEADERS})
-add_library (UKF_dynamic SHARED ${SRC} ${HEADERS})
-
-# Set the link libraries :
-TARGET_LINK_LIBRARIES(UKF_static ${Boost_LIBRARIES} )
-TARGET_LINK_LIBRARIES(UKF_dynamic ${Boost_LIBRARIES} )
+add_library (UKFs STATIC ${SRC} ${HEADERS})
+add_library (UKFd SHARED ${SRC} ${HEADERS})
 
 ### Define the installation procedure
-install(TARGETS UKF_dynamic UKF_static DESTINATION ${PROJECT_SOURCE_DIR}/lib)
+# -- Local install
+install(TARGETS UKFd UKFs DESTINATION ${PROJECT_SOURCE_DIR}/lib)
 install(FILES ${HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include)
+
+## -- System install
+#install(FILES ${HEADERS} DESTINATION /usr/local/include/qUKF)
+#install(TARGETS UKFs UKFd DESTINATION /usr/local/lib)

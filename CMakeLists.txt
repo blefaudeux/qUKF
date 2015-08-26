@@ -6,3 +6,7 @@ project (qUKF)
 # the project's entire directory structure.
 add_subdirectory (libUKF) 
 add_subdirectory (demo) 
+add_subdirectory (pyUKF)
+
+add_dependencies( demo UKFd)
+add_dependencies( pyUKF UKFd)
