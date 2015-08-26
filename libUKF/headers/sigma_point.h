@@ -4,6 +4,15 @@
 #include "statistic_tools.h"
 #include "eigen_tools.h"
 
+/*
+ *  @license GPL
+ *  @author Benjamin Lefaudeux (blefaudeux at github)
+ *  @file sigma_point.h
+ *  @version 1.0
+ *  @date 12-11-2013
+ */
+
+
 using namespace Eigen;
 using namespace std;
 

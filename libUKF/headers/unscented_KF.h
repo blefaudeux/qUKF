@@ -5,6 +5,15 @@
 #include "sigma_q_point.h"
 #include <memory>
 
+/*
+ *  @license GPL
+ *  @author Benjamin Lefaudeux (blefaudeux at github)
+ *  @file unscented_KF.
+ *  @brief Implements a UKF filter with quaternions to filter angular positions
+ *  @version 1.0
+ *  @date 12-11-2013
+ */
+
 using namespace Eigen;
 
 /*

@@ -72,4 +72,4 @@ MESSAGE("LibUKF Path :\n ${LIBUKF_BINARY_DIR}\n")
 add_executable(demo ${SRC} ${HEADERS})
 
 # Link the executable to the UKF library.
-target_link_libraries (demo UKF_dynamic ${OpenCV_LIBS})
+target_link_libraries (demo UKFd ${OpenCV_LIBS})
