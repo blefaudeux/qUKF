@@ -1,0 +1,1 @@
+This allows you to build a Python module which can then be imported and use from within a Python script. The original UKF library must be compiled and installed beforehand.
