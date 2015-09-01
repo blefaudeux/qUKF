@@ -43,7 +43,6 @@ public:
         {
             ++m_index;
             m_buffer.emplace_back( item );
-            m_buffer.push_back( item );
             ++m_fill;
         }
         else
