@@ -16,6 +16,8 @@ find_package(Boost REQUIRED)
 find_package(eigen3)
 if(NOT eigen3_FOUND)
   set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
+  set(EIGEN3_INCLUDE_DIR "eigen")
+
 
   if(NOT EIGEN3_INCLUDE_DIR )
     # Try to manually define Eigen location
