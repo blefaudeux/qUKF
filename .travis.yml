@@ -17,7 +17,8 @@ addons:
     packages:
     - gcc
     - g++
-    - libboost-all-dev
+    - libboost-dev
+    - libboost-random-dev
     - libeigen3-dev
 
 notifications:
