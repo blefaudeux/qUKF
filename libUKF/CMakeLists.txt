@@ -14,21 +14,11 @@ include_directories(${PROJECT_SOURCE_DIR}/headers)
 # Try to find the needed packages
 find_package(Boost REQUIRED)
 find_package(eigen3)
+
 if(NOT eigen3_FOUND)
-  set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
-	
-  if(NOT EIGEN3_INCLUDE_DIR )
-    # Try to manually define Eigen location
-    set(ENV{EIGEN3_INCLUDE_DIR} "/usr/include/eigen3/")
-    set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
-
-    # Raise error if that's not enough
-    if(NOT EIGEN3_INCLUDE_DIR )
-      message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
-    endif()
-
-    include_directories( "${EIGEN3_INCLUDE_DIR}" )
-  endif()
+	find_package( PkgConfig )
+	pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+	include_directories( ${EIGEN3_INCLUDE_DIRS} )
 endif()
 
 # GCC flags
