@@ -1,12 +1,7 @@
 language: cpp
-sudo: required
+sudo: false
 compiler:
   - g++
-
-before_install:
-  - chmod u+x get_dependencies.sh
-  - sudo apt-get install libboost-dev
-  - sudo apt-get install libeigen3-dev
 
 script:
   - mkdir build
@@ -21,6 +16,8 @@ addons:
     packages:
     - gcc
     - g++
+    - libboost-dev
+    - libeigen3-dev
 
 notifications:
-  email: false
+  email: benjamin.lefaudeux@gmail.com
