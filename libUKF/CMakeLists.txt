@@ -12,6 +12,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/headers)
 
 # Try to find the needed packages
+set(Boost_USE_STATIC_LIBS OFF)
 find_package(Boost REQUIRED COMPONENTS "random")
 find_package( PkgConfig )
 pkg_check_modules( EIGEN3 REQUIRED eigen3 )
