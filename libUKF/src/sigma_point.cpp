@@ -17,11 +17,7 @@ SigmaPoints::SigmaPoints(const MatrixXf &mean,
    * Copy distribution parameters
    */
 
-  if ( (mean.rows () != cov.cols ()) || cov.cols () != cov.rows ()) {
-    std::fprintf(stderr, "SPoint : Could not create sigma points, matrix sizes do not match");
-  }
-
-  _dim   = mean.rows ();
+    _dim   = mean.rows ();
 
   _mean_reference   = mean;
 
