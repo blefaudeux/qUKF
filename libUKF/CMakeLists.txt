@@ -12,10 +12,15 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/headers)
 
 # Try to find the needed packages
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS "random")
 find_package( PkgConfig )
 pkg_check_modules( EIGEN3 REQUIRED eigen3 )
 include_directories( ${EIGEN3_INCLUDE_DIRS} )
+
+if(Boost_FOUND)
+    include_directories( ${BOOST_INCLUDE_DIRS} )
+endif()
+
 
 # Compiler flags
 include(CheckCXXCompilerFlag)
