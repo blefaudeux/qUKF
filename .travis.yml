@@ -1,0 +1,27 @@
+language: cpp
+sudo: false
+compiler:
+  - g++
+
+before_install:
+  - chmod u+x get_dependencies.sh
+  - ./get_dependencies.sh
+
+script:
+  - g++ --version
+  - g++-4.8 --version
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make all
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+
+notifications:
+  email: false
