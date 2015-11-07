@@ -17,7 +17,7 @@ pkg_check_modules( EIGEN3 REQUIRED eigen3 )
 include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
 set(Boost_USE_STATIC_LIBS OFF)
-find_package( Boost REQUIRED Random)
+find_package( Boost REQUIRED )
 include_directories( ${BOOST_INCLUDE_DIRS} )
 
 # Compiler flags
@@ -52,6 +52,10 @@ endif()
 # Create static and dynamic libraries
 add_library (UKFs STATIC ${SRC} ${HEADERS})
 add_library (UKFd SHARED ${SRC} ${HEADERS})
+
+# Set the link libraries :
+TARGET_LINK_LIBRARIES(UKFs ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(UKFs ${Boost_LIBRARIES} )
 
 ### Define the installation procedure
 # -- Local install

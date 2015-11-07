@@ -1,12 +1,9 @@
 language: cpp
-sudo: required
+sudo: false
 compiler:
   - g++
   - clang
-  
-before_install:
-  - sudo apt-get install libboost-all-dev
-  
+    
 script:
   - mkdir build
   - cd build
@@ -23,4 +20,4 @@ addons:
     - libeigen3-dev
 
 notifications:
-  email: benjamin.lefaudeux@gmail.com
+  email: none
