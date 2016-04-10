@@ -9,12 +9,14 @@
  *  @date 12-11-2013
  */
 
-UKF::UKF(const MatrixXf &initial_state,
-         const MatrixXf &initial_cov,
-         const MatrixXf &process_noise,
-         const MatrixXf &measurement_noise,
-         void (*_meas_function)(const MatrixXf &, MatrixXf &),
-         void (*_prop_function)(const MatrixXf &, MatrixXf &),
+using namespace qukf;
+
+UKF::UKF(const MatXf &initial_state,
+         const MatXf &initial_cov,
+         const MatXf &process_noise,
+         const MatXf &measurement_noise,
+         void (*_meas_function)(const MatXf &, MatXf &),
+         void (*_prop_function)(const MatXf &, MatXf &),
          float kappa)  {
 
     m_time_step = 1.f;
@@ -67,7 +69,7 @@ UKF::UKF(const MatrixXf &initial_state,
     m_kappa = kappa;
 
     // Allocate particles (we already know the dimension)
-    m_particles.reset( new SigmaPoints(k_state_post, k_cov_post, m_kappa));
+    m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
     m_particles->setMeasurementFunction (_meas_function);
     m_particles->setPropagationFunction (_prop_function);
 
@@ -76,16 +78,16 @@ UKF::UKF(const MatrixXf &initial_state,
 }
 
 
-UKF::UKF(const MatrixXf &initial_state,
-         const MatrixXf &initial_q_state,
-         const MatrixXf &initial_cov,
-         const MatrixXf &initial_q_cov,
-         const MatrixXf &process_noise,
-         const MatrixXf &process_q_noise,
-         const MatrixXf &measurement_noise,
-         const MatrixXf &measurement_q_noise,
-         void (*_meas_function)(const MatrixXf &, MatrixXf &),
-         void (*_prop_function)(const MatrixXf &, MatrixXf &),
+UKF::UKF(const MatXf &initial_state,
+         const MatXf &initial_q_state,
+         const MatXf &initial_cov,
+         const MatXf &initial_q_cov,
+         const MatXf &process_noise,
+         const MatXf &process_q_noise,
+         const MatXf &measurement_noise,
+         const MatXf &measurement_q_noise,
+         void (*_meas_function)(const MatXf &, MatXf &),
+         void (*_prop_function)(const MatXf &, MatXf &),
          void (*_meas_Qfunction)(const Quaternionf &, Quaternionf &),
          void (*_prop_Qfunction)(const Quaternionf &, Quaternionf &),
          float kappa,
@@ -160,7 +162,7 @@ UKF::UKF(const MatrixXf &initial_state,
     m_kappa_q  = kappa_q;
 
     // Allocate particles and set measurement and propagation functions
-    m_particles.reset( new SigmaPoints(k_state_post, k_cov_post, m_kappa));
+    m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
     m_particles->setMeasurementFunction (_meas_function);
     m_particles->setPropagationFunction (_prop_function);
 
@@ -186,15 +188,15 @@ UKF::~UKF() {
  * \brief UKF::computeKalmanGain
  * Computes the Kalman gain needed in the update step
  */
-void UKF::computeKalmanGain(const MatrixXf &cross_correlation,
-                            const MatrixXf &covariance_predicted,
-                            MatrixXf &kalman_gain) {
+void UKF::computeKalmanGain(const MatXf &cross_correlation,
+                            const MatXf &covariance_predicted,
+                            MatXf &kalman_gain) {
     /*!
    * Kalman gain is P_cross_correlation * (P_predicted)^-1
    */
 
     /* Compute gain */
-    MatrixXf innov_cov_inverse;
+    MatXf innov_cov_inverse;
 
     innov_cov_inverse = covariance_predicted.inverse();
 
@@ -203,7 +205,7 @@ void UKF::computeKalmanGain(const MatrixXf &cross_correlation,
     kalman_gain = cross_correlation * innov_cov_inverse;
 }
 
-void UKF::getStatePre(MatrixXf &state_pre) const {
+void UKF::getStatePre(MatXf &state_pre) const {
 
     if (!b_use_quaternions) {
         state_pre = k_state_pre.block(0,0, m_dim, 1); // Only get the estimated variables, no noise elements
@@ -215,7 +217,7 @@ void UKF::getStatePre(MatrixXf &state_pre) const {
     }
 }
 
-void UKF::getStatePost(MatrixXf &state_post) const {
+void UKF::getStatePost(MatXf &state_post) const {
     if (!b_use_quaternions) {
         state_post = k_state_post.block(0,0, m_dim, 1);
     } else {
@@ -295,7 +297,7 @@ void UKF::propagateSigmaQPoints() {
 }
 
 
-void UKF::setState (const MatrixXf &new_state, const MatrixXf &new_cov) {
+void UKF::setState (const MatXf &new_state, const MatXf &new_cov) {
     k_state_post.setZero ();
     k_state_post.block(0,0, new_state.cols (), 1)  = new_state;
     k_state_pre   = k_state_post;
@@ -309,7 +311,7 @@ void UKF::setState (const MatrixXf &new_state, const MatrixXf &new_cov) {
  * \param measurement_noise
  * \warning model_noise must have been set beforehand !
  */
-void UKF::setMeasurementNoise(const MatrixXf &measurement_noise) {
+void UKF::setMeasurementNoise(const MatXf &measurement_noise) {
     k_measurement_noise = measurement_noise;
 
     // FIXME : dimension problem if k_cov is too small !
@@ -331,7 +333,7 @@ void UKF::setMeasurementQFunction (void (*_meas_function)(const Quaternionf &, Q
     }
 }
 
-void UKF::setProcessNoise(const MatrixXf &process_noise) {
+void UKF::setProcessNoise(const MatXf &process_noise) {
     k_process_noise = process_noise;
     // FIXME : dimension problem if k_cov is too small !
     k_cov_pre.block (m_dim,
@@ -342,12 +344,12 @@ void UKF::setProcessNoise(const MatrixXf &process_noise) {
     k_cov_post = k_cov_pre;
 }
 
-void UKF::setProcessQNoise(const MatrixXf &process_q_noise) {
+void UKF::setProcessQNoise(const MatXf &process_q_noise) {
     // TODO: foolproof check in dimensions ?
     k_process_q_noise = process_q_noise;
 }
 
-void UKF::setMeasurementQNoise (const MatrixXf &measurement_q_noise) {
+void UKF::setMeasurementQNoise (const MatXf &measurement_q_noise) {
     // TODO: foolproof check in dimensions ?
     k_measurement_noise = measurement_q_noise;
 }
@@ -356,7 +358,7 @@ void UKF::setMeasurementQNoise (const MatrixXf &measurement_q_noise) {
  * \brief UKF::update
  * \param new_measure : a 6x1 float Eigen matrix !
  */
-void UKF::update (const MatrixXf &new_measure) {
+void UKF::update (const MatXf &new_measure) {
     // Failsafe stupid tests
     if (new_measure.rows () != m_dim) {
         THROW_ERR("UKF : Wrong measure vector dimension\n");
@@ -376,7 +378,7 @@ void UKF::update (const MatrixXf &new_measure) {
  * \brief UKF::update
  * \param new_measure : a 6x1 float Eigen matrix !
  */
-void UKF::update (const MatrixXf &vec_measure, const MatrixXf &angle_measure) {
+void UKF::update (const MatXf &vec_measure, const MatXf &angle_measure) {
 
     // Failsafe stupid tests
     if (vec_measure.rows () != m_dim) {
@@ -397,7 +399,7 @@ void UKF::update (const MatrixXf &vec_measure, const MatrixXf &angle_measure) {
 }
 
 
-void UKF::updateParticles (const MatrixXf &new_measure) {
+void UKF::updateParticles (const MatXf &new_measure) {
 
     // Project on measurement space & Get expected measure
     m_particles->measureSigmaPoints ();
@@ -436,7 +438,7 @@ void UKF::updateParticles (const MatrixXf &new_measure) {
 }
 
 
-void UKF::updateQParticles(const MatrixXf &new_angular_measure) {
+void UKF::updateQParticles(const MatXf &new_angular_measure) {
 
     // Compute innovation & Kalman gain
     k_innovation = new_angular_measure - k_state_q_pre;

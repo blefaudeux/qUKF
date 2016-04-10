@@ -199,7 +199,7 @@ class UKF
         float m_time_step;
         float m_kappa, m_kappa_q;
 
-        std::unique_ptr<SigmaPoints> m_particles;
+        std::unique_ptr<SigmaPoints<float>> m_particles;
         std::unique_ptr<SigmaQPoints> m_q_particles;
 
         /*
