@@ -84,8 +84,12 @@ class CircBuffer
         }
 
         Type const & operator[](int nIndex) const   {
-            auto const realIndex = ( m_fill - m_index + nIndex) % m_maxSize;
-            return m_buffer[realIndex];
+            if(m_fill == m_maxSize) {
+                auto const realIndex = ( m_index + m_fill +1 + nIndex) % m_maxSize;
+                return m_buffer[realIndex];
+            }
+
+            return m_buffer[nIndex % m_maxSize];
         }
 
     private:

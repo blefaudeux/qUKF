@@ -251,10 +251,6 @@ void MotionEstimation::update(const float *variable) {
     _measure_latest(4,0) = variable[4];
     _measure_latest(5,0) = variable[5];
 
-#ifdef DEBUG
-    cout << "\nNew measure\n" << _measure_latest << endl;
-#endif
-
     filter->update(_measure_latest);
 }
 

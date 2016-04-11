@@ -17,16 +17,18 @@ void draw(IplImage *image,
 
     Point2f start = filtered_states[0];
 
-    for (unsigned int i=1; i<filtered_states.size()-1; ++i)
+    for (unsigned int i=1; i<filtered_states.size(); ++i)
     {
-        auto & pose = filtered_states[i];
+        auto const & pose = filtered_states[i];
         cvDrawLine(image, cvPoint(start.x, start.y), cvPoint(pose.x,pose.y), cvScalar(0,255,0),2);
         start = pose;
     }
 
     // Show the predicted motion vector (?)
+    auto const & lastVal = filtered_states.front();
+
     cvDrawLine( image,
-                cvPoint(filtered_states[0].x, filtered_states[0].y),
+                cvPoint(lastVal.x, lastVal.y),
                 cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
 }
 
@@ -54,7 +56,7 @@ int main() {
     unsigned int width = 800, height  = 800;
 
     int const N_TARGETS = 5;
-    int const MAX_POSES = 100;
+    int const MAX_POSES = 30;
     int const WAIT_TIME_MS = 40;
 
     // Allocate all the buffers to store historical data
@@ -72,7 +74,7 @@ int main() {
 
     for (auto & motion_estimator :  motion_estimators)
     {
-        motion_estimator.reset( new MotionEstimation(&poses[0], 1e3, 1.0, 0.05));
+        motion_estimator.reset( new MotionEstimation(&poses[0], 1e3, 0.1, 0.05));
     }
 
     // Track the circling targets
@@ -96,8 +98,8 @@ int main() {
             motion_estimator->getPropagatedState(predicted_state);
 
             // Update the state with a new noisy measurement :
-            measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%50);
-            measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%50);
+            measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%30);
+            measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%30);
 
             // Define a new 'speed' measurement
             measurements[3] = measurements[0] - previous_state[0];
