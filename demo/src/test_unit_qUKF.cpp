@@ -5,16 +5,19 @@
 #include <utility>
 #include <memory>
 
+using namespace cv;
+using namespace std;
+
 void draw(IplImage *image,
           float const  *measurements,
           float const *predicted_state,
-          CircBuffer<cv::Point2f> const & filtered_states) {
+          CircBuffer<Point2f> const & filtered_states) {
 
     cvDrawCircle(image, cvPoint(measurements[0],measurements[1]),2,cvScalar(0,0,255),2);
 
-    cv::Point2f start = filtered_states[0];
+    Point2f start = filtered_states[0];
 
-    for (unsigned int i= 0; i<filtered_states.size(); ++i)
+    for (unsigned int i=1; i<filtered_states.size()-1; ++i)
     {
         auto & pose = filtered_states[i];
         cvDrawLine(image, cvPoint(start.x, start.y), cvPoint(pose.x,pose.y), cvScalar(0,255,0),2);
@@ -22,7 +25,9 @@ void draw(IplImage *image,
     }
 
     // Show the predicted motion vector (?)
-    cvDrawLine(image, cvPoint(filtered_states[0].x, filtered_states[0].y), cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
+    cvDrawLine( image,
+                cvPoint(filtered_states[0].x, filtered_states[0].y),
+                cvPoint(predicted_state[0],predicted_state[1]), cvScalar(255,0,0),2);
 }
 
 bool updateDisplay(IplImage *image, int waitTime)
@@ -53,17 +58,17 @@ int main() {
     int const WAIT_TIME_MS = 40;
 
     // Allocate all the buffers to store historical data
-    vector<CircBuffer<cv::Point2f> *> vec_poses(N_TARGETS);
+    vector<CircBuffer<Point2f> *> vec_poses(N_TARGETS);
     for (int i=0; i< N_TARGETS; ++i)
     {
-        vec_poses[i] = new CircBuffer<cv::Point2f>(MAX_POSES, true);
+        vec_poses[i] = new CircBuffer<Point2f>(MAX_POSES, true);
     }
 
     IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
     // Instanciate the motion filters
     float poses[3] = {0,0,0};
-    vector<std::unique_ptr<MotionEstimation>> motion_estimators(N_TARGETS);
+    vector<unique_ptr<MotionEstimation>> motion_estimators(N_TARGETS);
 
     for (auto & motion_estimator :  motion_estimators)
     {
@@ -101,7 +106,7 @@ int main() {
             // Get the filtered state :
             motion_estimator->update(measurements);
             motion_estimator->getLatestState(filtered_state);
-            vec_poses[t]->add(cv::Point2f( filtered_state[0], filtered_state[1]));
+            vec_poses[t]->add(Point2f( filtered_state[0], filtered_state[1]));
 
             // Draw both the noisy input and the filtered state :
             draw(image, measurements, predicted_state, *vec_poses[t++]);
