@@ -3,6 +3,16 @@
 
 #include "sigma_point.h"
 #include "sigma_q_point.h"
+#include <memory>
+
+
+/*
+ *  @license GPL
+ *  @author Benjamin Lefaudeux (blefaudeux at github)
+ *  @file unscented_KF.
+ *  @brief Implements a UKF filter with quaternions to filter angular positions
+ *  @version 1.1
+ */
 
 using namespace Eigen;
 
@@ -19,247 +29,441 @@ void EulerToQuaternion(const Matrix <float, 3,1> &input,
 /*
  * The UKF filter class...
  */
+template <typename T>
 class UKF
 {
+    public:
 
-  public:
-    /*!
-     * \brief UKF constructor : only vector values
-     * \param initial_state
-     * \param initial_cov
-     * \param model_noise
-     * \param measurement_noise
-     * \param alpha
-     * \param beta
-     */
-    UKF(const MatrixXf &initial_state,
-        const MatrixXf &initial_cov,
-        const MatrixXf &model_noise,
-        const MatrixXf &measurement_noise,
-        float alpha);
+        UKF(const MatX<T> &initial_state,
+            const MatX<T> &initial_cov,
+            const MatX<T> &model_noise,
+            const MatX<T> &measurement_noise,
+            void (*_meas_function)(const MatX<T> &, MatX<T> &),
+            void (*_prop_function)(const MatX<T> &, MatX<T> &),
+            T alpha)
+        {
+            m_q_particles.reset();
 
-    /*!
-     * \brief UKF alternate constructor
-     *  using vector and angular values
-     *
-     * \param initial_state       : vector values
-     * \param initial_q_state     : angular values (in radians) -> computed using quaternions
-     * \param initial_cov         : covariance of the vector state
-     * \param initial_q_cov       : covariance of the angular state
-     * \param process_noise       : process noise of the vector state
-     * \param process_q_noise     : process noise of the angular state
-     * \param measurement_noise   : measurement noise of the vector state
-     * \param measurement_q_noise : measurement noise of the angular state
-     * \param alpha               : controls the spread of the sigma-points
-     * \param beta                : controls the weight of the initial mean value in the sigma points
-     */
-    UKF(const MatrixXf &initial_state,
-        const MatrixXf &initial_q_state,
-        const MatrixXf &initial_cov,
-        const MatrixXf &initial_q_cov,
-        const MatrixXf &process_noise,
-        const MatrixXf &process_q_noise,
-        const MatrixXf &measurement_noise,
-        const MatrixXf &measurement_q_noise,
-        float kappa,
-        float kappa_q);
+            // Take extended state vector into account
+            int dim_ext = initial_state.rows ()
+                    + model_noise.rows ()
+                    + measurement_noise.rows ();
 
-    ~UKF();
+            m_dim = initial_state.rows ();
 
-    // --------------------------------//
-    // -- Intrinsic filtering logic -- //
-    void predict();
+            // Initialize matrices --> extended state taking noises into account
+            k_state_pre.setZero (dim_ext, 1);
+            k_state_pre.block (0,0, initial_state.rows (), 1) = initial_state;
 
-    /*!
-     * \brief update (in case of a vector-only filter)
-     * \param new_measure
-     */
-    void update(const MatrixXf &new_measure);
+            k_cov_pre.setZero (dim_ext, dim_ext);
+            k_cov_pre.block (0,0, m_dim, m_dim) = initial_cov;
+            k_cov_pre.block (m_dim,m_dim, model_noise.cols (), model_noise.cols ()) = model_noise;
+            k_cov_pre.block (m_dim + model_noise.cols (),
+                             m_dim + model_noise.cols (),
+                             measurement_noise.cols (),
+                             measurement_noise.cols ()) = measurement_noise;
 
-    /*!
-     * \brief update (in case of a vector + quaternions filter)
-     * \param angle_measure
-     * \param vec_measure
-     */
-    void update (const MatrixXf &vec_measure, const MatrixXf &angle_measure);
+            // Set _post values
+            k_state_post  = k_state_pre;
+            k_cov_post    = k_cov_pre;
 
-    // -----------------//
-    // -- Get values -- //
+            k_expected_cov.setIdentity (dim_ext, dim_ext);
 
-    /*!
-     * \brief getStatePre : get propagated state prior to measurement correction
-     * \param state_pre
-     */
-    void getStatePre(MatrixXf &state_pre) const;
+            k_process_noise     = model_noise;
+            k_measurement_noise = measurement_noise;
 
-    /*!
-     * \brief getStatePost : get state posterior to measurement correction
-     * \param state_post
-     */
-    void getStatePost(MatrixXf &state_post) const;
+            k_cov_cross_pred_meas.setZero (dim_ext, dim_ext);
+            k_cov_cross_pred_ref.setZero (dim_ext, dim_ext);
+
+            k_gain.setZero (dim_ext, dim_ext);
+            k_innovation.setZero (dim_ext, 1);
+
+            m_kappa = alpha;
+
+            // Allocate particles (we already know the dimension)
+            m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
+            m_particles->setMeasurementFunction (_meas_function);
+            m_particles->setPropagationFunction (_prop_function);
+
+            // Standard "vector space" UKF, no quaternions
+            b_use_quaternions = false;
+        }
 
 
-    // ---------------------//
-    // -- Set parameters -- //
+        UKF(MatX<T> const &initial_state,
+            MatX<T> const &initial_q_state,
+            MatX<T> const &initial_cov,
+            MatX<T> const &initial_q_cov,
+            MatX<T> const &process_noise,
+            MatX<T> const &process_q_noise,
+            MatX<T> const &measurement_noise,
+            MatX<T> const &measurement_q_noise,
+            void (*_meas_function)(const MatX<T> &, MatX<T> &),
+            void (*_prop_function)(const MatX<T> &, MatX<T> &),
+            void (*_meas_Qfunction)(const Quaternionf &, Quaternionf &),
+            void (*_prop_Qfunction)(const Quaternionf &, Quaternionf &),
+            T kappa, T kappa_q) {
 
-    /*!
-     * \brief setState : set initial filter position ( (0) by default)
-     * \param new_state
-     * \param new_cov
-     */
-    void setState(const MatrixXf &new_state, const MatrixXf &new_cov);
+            // Take extended state vector into account
+            int dim_ext = initial_state.rows ()
+                    + process_noise.rows ()
+                    + measurement_noise.rows ();
 
-    /*!
-     * \brief setMeasurementNoise : set the constant (additive) measure noise
-     * \param measurement_noise
-     */
-    void setMeasurementNoise(const MatrixXf &measurement_noise);
+            m_dim = initial_state.rows ();
 
-    /*!
-     * \brief setMeasurementQNoise
-     * \param measurement_q_noise
-     */
-    void setMeasurementQNoise(const MatrixXf &measurement_q_noise);
+            //Initialize matrices
+            //  --> extended state taking noises into account
 
-    /*!
-     * \brief setProcessNoise : set the constant (additive) process noise
-     * \param process_noise
-     */
-    void setProcessNoise(const MatrixXf &process_noise);
+            k_state_pre.setZero (dim_ext, 1);
+            k_state_pre.block (0,0, initial_state.rows (), 1) = initial_state;
 
-    /*!
-     * \brief setProcessNoise : set the constant (additive) process noise in quaternion space
-     * \param process_noise
-     */
-    void setProcessQNoise(const MatrixXf &process_q_noise);
+            k_cov_pre.setZero (dim_ext, dim_ext);
+            k_cov_pre.block (0,0, m_dim, m_dim) = initial_cov;
+            k_cov_pre.block (m_dim,m_dim, process_noise.cols (), process_noise.cols ()) = process_noise;
+            k_cov_pre.block (m_dim + process_noise.cols (),
+                             m_dim + process_noise.cols (),
+                             measurement_noise.cols (),
+                             measurement_noise.cols ()) = measurement_noise;
+
+            // Initialize quaternions matrices
+            // TODO : check initial dimensions
+            m_dim_q = initial_q_state.rows ();
+
+            k_state_q_pre = initial_q_state;
+
+            k_cov_q_pre = initial_q_cov;
+
+            // Set _post values
+            k_state_post = k_state_pre;
+            k_cov_post = k_cov_pre;
+
+            k_expected_cov.setIdentity (dim_ext, dim_ext);
+
+            k_process_noise = process_noise;
+            k_measurement_noise = measurement_noise;
+
+            k_cov_cross_pred_meas.setZero (dim_ext, dim_ext);
+            k_cov_cross_pred_ref.setZero (dim_ext, dim_ext);
+
+            k_gain.setZero (dim_ext, dim_ext);
+            k_innovation.setZero(dim_ext, 1);
+
+            // Set _post quaternion values
+            k_state_q_post = k_state_q_pre;
+            k_cov_q_post = k_cov_q_pre;
+
+            k_process_q_noise = process_q_noise;
+            k_measurement_q_noise = measurement_q_noise;
+
+            m_kappa    = kappa;
+            m_kappa_q  = kappa_q;
+
+            // Allocate particles and set measurement and propagation functions
+            m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
+            m_particles->setMeasurementFunction (_meas_function);
+            m_particles->setPropagationFunction (_prop_function);
+
+            // Allocate quaternion particles and set measurement and propagation functions
+            m_q_particles.reset( new SigmaQPoints(k_state_q_post.block(0,0, 3,1),
+                                                  k_cov_q_post.block(0,0, 3,3),
+                                                  m_kappa_q) );
+
+            m_q_particles->setProcessNoise (k_process_q_noise);
+            m_q_particles->setMeasurementFunction(_meas_Qfunction);
+            m_q_particles->setPropagationFunction(_prop_Qfunction);
+
+            b_use_quaternions = true;
+        }
+
+        void predict() {
+            // Add the measurement noise and the process noise to the cov matrix :
+            k_cov_post.block (m_dim,m_dim,
+                              k_process_noise.cols (),
+                              k_process_noise.cols ()) = k_process_noise;
+
+            k_cov_post.block (m_dim + k_process_noise.cols (),
+                              m_dim + k_process_noise.cols (),
+                              k_measurement_noise.cols (),
+                              k_measurement_noise.cols ()) = k_measurement_noise;
+
+            // Add the correlations between state errors and process noise :
+            // TODO
+            m_particles->setState (k_state_post, k_cov_post);
+
+            // Propagate sigma points according to motion model
+            propagateSigmaPoints();
 
 
-    /*!
-     * \brief setPropagationFunction :
-     *  Define  the function used to propagate the sigma points
-     *  The propagation function parameters apply on the state vector
-     */
-    void setPropagationFunction(void (*_prop_function)(const MatrixXf &, MatrixXf &));
+            // Fill in predicted state from propagated sigma-points
+            m_particles->getPredictedState(k_state_pre, k_cov_pre, k_cov_cross_pred_ref);
 
-    /*!
-     * \brief setPropagationQFunction
-     *  Define the function used to propagate the quaternions
-     */
-    void setPropagationQFunction (void (*_prop_function) (const Quaternionf &, Quaternionf &));
+            // Add process noise to the predicted covariance (independent additive noise ?)
+            k_cov_pre.block(0,0, k_process_noise.rows (), k_process_noise.rows ()) += k_process_noise;
 
-    /*!
-     * \brief setMeasurementFunction :
-     *  Define  the function used to propagate the sigma points
-     *  The propagation function parameters apply on the state vector
-     */
-    void setMeasurementFunction(void (*_meas_function)(const MatrixXf &, MatrixXf &));
+            if (b_use_quaternions) {
+                // Rmk : process noise is already added to the covariance estimation inside the
+                // sigma quaternions
+                m_q_particles->setState (k_state_q_post, k_cov_q_post);
+
+                // Propagate quaternions
+                propagateSigmaQPoints ();
+
+                // Get predicted state
+                m_q_particles->getStatePre(k_state_q_pre, k_cov_q_pre);
+            }
+        }
+
+        void update(const MatX<T> &new_measure) {
+            // Failsafe stupid tests
+            if (new_measure.rows () != m_dim) {
+                THROW_ERR("UKF : Wrong measure vector dimension\n");
+            } else if (_measurementFunc == NULL) {
+                THROW_ERR("UKF : Measurement function is not defined");
+            }
+
+            if (b_use_quaternions) {
+                THROW_ERR("UKF : Filter including quaternions, you cannot just update vector values\n");
+            }
+
+            updateParticles (new_measure);
+        }
+
+        void update (const MatX<T> &vec_measure, const MatX<T> &angle_measure) {
+            // Failsafe stupid tests
+            if (vec_measure.rows () != m_dim) {
+                THROW_ERR("UKF : Wrong measure vector dimension\n");
+            } else if (_measurementFunc == NULL) {
+                THROW_ERR("UKF : Measurement function is not defined");
+            }
+
+            if (!b_use_quaternions) {
+                THROW_ERR("UKF : Vector-only filter, you cannot update quaternions\n");
+            }
+
+            // Update Sigma points
+            updateParticles (vec_measure);
+
+            // Update Sigma quaternions
+            updateQParticles (angle_measure);
+        }
+
+        // Gets -----
+        void getStatePre(MatX<T> &state_pre) const {
+            if (!b_use_quaternions) {
+                state_pre = k_state_pre.block(0,0, m_dim, 1); // Only get the estimated variables, no noise elements
+            }
+            else {
+                state_pre.resize (m_dim + k_state_q_pre.rows (), 1);
+                state_pre.block(0,0,m_dim, 1) = k_state_pre.block(0,0, m_dim, 1);
+                state_pre.block(m_dim,0,k_state_q_pre.rows (), 1) = k_state_q_pre;
+            }
+        }
+
+        void getStatePost(MatX<T> &state_post) const {
+            if (!b_use_quaternions) {
+                state_post = k_state_post.block(0,0, m_dim, 1);
+            } else {
+                state_post.resize (m_dim + k_state_q_post.rows (), 1);
+                state_post.block(0,0,m_dim, 1) = k_state_post.block(0,0, m_dim, 1);
+                state_post.block(m_dim,0,k_state_q_post.rows (), 1) = k_state_q_post;
+            }
+        }
+
+        // Sets -----
+        void setState(const MatX<T> &new_state, const MatX<T> &new_cov) {
+            k_state_post.setZero ();
+            k_state_post.block(0,0, new_state.cols (), 1)  = new_state;
+            k_state_pre   = k_state_post;
+
+            k_cov_post  = new_cov;
+            k_cov_pre   = k_cov_post;
+        }
+
+        void setMeasurementNoise(const MatX<T> &measurement_noise) {
+            k_measurement_noise = measurement_noise;
+
+            // FIXME : dimension problem if k_cov is too small !
+            k_cov_pre.block (m_dim + k_process_noise.cols (),
+                             m_dim + k_process_noise.cols (),
+                             measurement_noise.cols (),
+                             measurement_noise.cols ()) = measurement_noise;
+
+            k_cov_post = k_cov_pre;
+        }
+
+        void setMeasurementQNoise(const MatX<T> &measurement_q_noise) {
+            k_measurement_noise = measurement_q_noise;
+        }
+
+        void setProcessNoise(const MatX<T> &process_noise) {
+            k_process_noise = process_noise;
+            // FIXME : dimension problem if k_cov is too small !
+            k_cov_pre.block (m_dim,
+                             m_dim,
+                             process_noise.cols (),
+                             process_noise.cols ()) = process_noise;
+
+            k_cov_post = k_cov_pre;
+        }
+
+        void setProcessQNoise(const MatX<T> &process_q_noise) {
+            k_process_q_noise = process_q_noise;
+        }
+
+        void setPropagationQFunction (void (*_prop_function)
+                                      (const Quaternionf &, Quaternionf &)) {
+            if(m_q_particles == NULL) {
+                _propagateQFunc = _prop_function;
+            } else {
+                m_q_particles->setPropagationFunction (_prop_function);
+            }
+        }
+
+        void setMeasurementQFunction(void (*_meas_function)
+                                     (const Quaternionf &, Quaternionf &)) {
+            if(m_q_particles == NULL) {
+                _measurementQFunc = _meas_function;
+            } else {
+                m_q_particles->setMeasurementFunction (_meas_function);
+            }
+        }
+
+    private :
+        void (*_propagateFunc)(const MatX<T> &, MatX<T> &);
+
+        void (*_measurementFunc)(const MatX<T> &, MatX<T> &);
+
+        void (*_propagateQFunc)(const Quaternionf &, Quaternionf &);
+
+        void (*_measurementQFunc)(const Quaternionf &, Quaternionf &);
 
 
-    /*!
-     * \brief setMeasurementQFunction :
-     *  Define  the function used to propagate the quaternion sigma points
-     */
-    void setMeasurementQFunction(void (*_meas_function)(const Quaternionf &, Quaternionf &));
+        void computeKalmanGain(const MatX<T> &cross_correlation,
+                               const MatX<T> &covariance_predicted,
+                               MatX<T> &kalman_gain)
+        {
+            MatXf innov_cov_inverse;
 
-  private :
-    bool  b_first_time;
-    bool  b_use_quaternions;
+            innov_cov_inverse = covariance_predicted.inverse();
+            kalman_gain = cross_correlation * innov_cov_inverse;
+        }
 
-    int   _dim;
-    int   _dim_q;
+        void computeSigmaQPoints() { m_q_particles->computeSigmaQPoints(); }
 
-    float _time_step;
-    float _kappa, _kappa_q;
+        void propagateSigmaPoints() { m_particles->propagateSigmaPoints (); }
 
-    /*
+        void propagateSigmaQPoints() {
+            m_q_particles->propagateSigmaQPoints ();
+            m_q_particles->computeQMeanAndCovariance(20, 0.001f);
+            // TODO: set the number of iterations as a parameter
+        }
+
+        void updateParticles(const MatX<T> &new_measure) {
+            // Project on measurement space & Get expected measure
+            m_particles->measureSigmaPoints ();
+
+            m_particles->getMeasuredState (k_state_meas,
+                                           k_cov_meas,
+                                           k_cov_cross_pred_meas);
+
+            // Compute innovation & Kalman gain:
+            k_measure_extended.setZero (new_measure.rows () +
+                                        k_measurement_noise.cols () +
+                                        k_process_noise.cols (),
+                                        1);
+
+            k_measure_extended.block(0,0, new_measure.rows (), 1) = new_measure;
+
+            k_innovation = k_measure_extended - k_state_meas;
+
+            k_cov_extended = k_cov_meas;
+
+            k_cov_extended.block (0,
+                                  0,
+                                  k_measurement_noise.cols (),
+                                  k_measurement_noise.cols ()) += k_measurement_noise;
+
+            computeKalmanGain (k_cov_cross_pred_meas,
+                               k_cov_extended,
+                               k_gain);
+
+            // Compute a posteriori estimate
+            k_state_post  = k_state_pre +
+                    k_gain * k_innovation;
+
+            // State and measurement space are the same, for now..
+            k_cov_post    = k_cov_pre -
+                    k_gain * k_cov_extended * k_gain.transpose();
+        }
+
+        void updateQParticles(const MatX<T> &new_angular_measure) {
+            // Compute innovation & Kalman gain
+            k_innovation = new_angular_measure - k_state_q_pre;
+
+
+            computeKalmanGain(k_cov_q_pre,  // TODO: implement a proper cross-correlation measurement ?
+                              k_cov_q_pre + k_measurement_q_noise,
+                              k_gain);
+
+
+            // Compute a posteriori estimate :
+            k_state_q_post = k_state_q_pre +
+                    k_gain * k_innovation;
+
+            k_cov_q_post    = k_cov_q_pre -
+                    k_gain * (k_cov_q_pre + k_measurement_q_noise) * k_gain.transpose();
+
+        }
+
+    private :
+        bool  b_first_time;
+        bool  b_use_quaternions;
+
+        int   m_dim;
+        int   m_dim_q;
+
+        T m_kappa, m_kappa_q;
+
+        std::unique_ptr<SigmaPoints<float>> m_particles;
+        std::unique_ptr<SigmaQPoints> m_q_particles;
+
+        /*
      *  State vector includes (excepting quaternions)
      *  x/y/z           - position
      *  x°/y°/z°        - linear speed
      *  w_x / w_y / w_z - rotation rate
      *  theta/phi/psi   - angular position (possibly absent, depending on quaternions)
      */
-    MatrixXf  k_process_noise;
-    MatrixXf  k_measurement_noise;
+        MatX<T>  k_process_noise;
+        MatX<T>  k_measurement_noise;
 
-    MatrixXf  k_gain;
-    MatrixXf  k_innovation;
-    MatrixXf  k_expected_cov;
+        MatX<T>  k_gain;
+        MatX<T>  k_innovation;
+        MatX<T>  k_expected_cov;
 
-    MatrixXf  k_state_pre;
-    MatrixXf  k_state_post;
-    MatrixXf  k_state_meas;
+        MatX<T>  k_state_pre;
+        MatX<T>  k_state_post;
+        MatX<T>  k_state_meas;
 
-    MatrixXf  k_cov_pre;
-    MatrixXf  k_cov_post;
-    MatrixXf  k_cov_meas;
-    MatrixXf  k_cov_extended;
-    MatrixXf  k_cov_cross_pred_meas;
-    MatrixXf  k_cov_cross_pred_ref;
-
-
-    MatrixXf  k_cross_corr;
-    MatrixXf  k_measure_extended;
-
-    /* Same matrices needed for quaternion stuff */
-    Vector3f  k_state_q_pre;
-    Vector3f  k_state_q_post;
-    Matrix3f  k_cov_q_pre;
-    Matrix3f  k_cov_q_post;
-    Matrix3f  k_process_q_noise;
-    Matrix3f  k_measurement_q_noise;
+        MatX<T>  k_cov_pre;
+        MatX<T>  k_cov_post;
+        MatX<T>  k_cov_meas;
+        MatX<T>  k_cov_extended;
+        MatX<T>  k_cov_cross_pred_meas;
+        MatX<T>  k_cov_cross_pred_ref;
 
 
-    /*
-     * Sigma_points : in vector, measure and quaternions space
-     */
-    SigmaPoints *_particles;
-    SigmaQPoints *_q_particles;
+        MatX<T>  k_cross_corr;
+        MatX<T>  k_measure_extended;
 
-    void (*_propagateFunc)(const MatrixXf &, MatrixXf &);
+        /* Same matrices needed for quaternion stuff */
+        Vec3<T>  k_state_q_pre;
+        Vec3<T>  k_state_q_post;
 
-    void (*_measurementFunc)(const MatrixXf &, MatrixXf &);
-
-    void (*_propagateQFunc)(const Quaternionf &, Quaternionf &);
-
-    void (*_measurementQFunc)(const Quaternionf &, Quaternionf &);
-
-    /*!
-     *  Methods (private) :
-     */
-
-    /*!
-     * \brief Computes the Kalman gain needed in the update step
-     */
-    void computeKalmanGain(const MatrixXf &cross_correlation,
-                           const MatrixXf &covariance_predicted,
-                           MatrixXf &kalman_gain);
-
-    /*!
-     * \brief Compute the new sigma points in quaternions space
-     */
-    void computeSigmaQPoints();
-
-    /*!
-     * \brief Propagate sigma points from the vector space
-     */
-    void propagateSigmaPoints();
-
-    /*!
-     * \brief Propagate Quaternions sigma points
-     */
-    void propagateSigmaQPoints();
-
-    /*!
-     * \brief updateParticles
-     * \param new_measure
-     */
-    void updateParticles(const MatrixXf &new_measure);
-
-    /*!
-     * \brief updateParticles
-     * \param new_measure
-     */
-    void updateQParticles(const MatrixXf &new_angular_measure);
+        Mat3<T>  k_cov_q_pre;
+        Mat3<T>  k_cov_q_post;
+        Mat3<T>  k_process_q_noise;
+        Mat3<T>  k_measurement_q_noise;
 };
 
 #endif // QKALMANFILTER_H

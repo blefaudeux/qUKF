@@ -11,26 +11,16 @@ include_directories(${PROJECT_SOURCE_DIR}/../libUKF/lib)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+# GCC flags
+SET( GCC_COVERAGE_COMPILE_FLAGS "-std=c++11 -Wall -Wextra -pedantic")
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
+
 # Try to find the needed packages
 find_package(Boost REQUIRED)
 
-find_package(eigen3)
-if(NOT eigen3_FOUND)
-  set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
-
-  if(NOT EIGEN3_INCLUDE_DIR )
-    # Try to manually define Eigen location
-    set(ENV{EIGEN3_INCLUDE_DIR} "/usr/include/eigen3/")
-    set(EIGEN3_INCLUDE_DIR "$ENV{EIGEN3_INCLUDE_DIR}")
-
-    # Raise error if that's not enough
-    if(NOT EIGEN3_INCLUDE_DIR )
-      message(FATAL_ERROR "Please point the environment variable EIGEN3_INCLUDE_DIR to the include directory of your Eigen3 installation.")
-    endif()  
-  endif()
-  include_directories(${EIGEN3_INCLUDE_DIR})
-  MESSAGE("Eigen path : ${EIGEN3_INCLUDE_DIR}\n")
-endif()
+find_package( PkgConfig )
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+include_directories( ${EIGEN3_INCLUDE_DIRS} )
 
 find_package( OpenCV REQUIRED )
 
@@ -55,9 +45,6 @@ endif()
 file(GLOB SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB HEADERS ${PROJECT_SOURCE_DIR}/headers/*.h)
 
-MESSAGE("Cpp files : \n ${SRC}\n")
-MESSAGE("H files : \n ${HEADERS}\n")
-
 # Make sure the linker can find the libUKF library once it is built. 
 set(LIBUKF_BINARY_DIR ${PROJECT_SOURCE_DIR}/../libUKF/lib)
 
@@ -68,4 +55,4 @@ MESSAGE("LibUKF Path :\n ${LIBUKF_BINARY_DIR}\n")
 add_executable(demo ${SRC} ${HEADERS})
 
 # Link the executable to the UKF library.
-target_link_libraries (demo UKF_dynamic ${OpenCV_LIBS})
+target_link_libraries (demo UKFd ${OpenCV_LIBS})

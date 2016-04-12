@@ -152,7 +152,7 @@ void SigmaQPoints::averageQuaternionsIterative(const vector <Quaternionf, aligne
   // See http://en.wikipedia.org/wiki/Generalized_quaternion_interpolation
 
   if (q_list.size () != q_weight.size ()) {
-    THROW_ERR("Error averagin quaternions, weights and quaternions lists have different sizes !");
+    THROW_ERR("Error averaging quaternions, weights and quaternions lists have different sizes !");
   }
 
   vector < AngleAxis<float> > err_aa_vector;
@@ -166,8 +166,7 @@ void SigmaQPoints::averageQuaternionsIterative(const vector <Quaternionf, aligne
 
   q_avg = q_list[0];
 
-  while ( (i < n_iterations) &&
-          (err_aa_mean.angle() >= max_err)) {
+  while ( (i < n_iterations) && (err_aa_mean.angle() >= max_err)) {
 
     /* Update error quaternions (in AngleAxis form) :
       * they are defined as the quaternions to go from

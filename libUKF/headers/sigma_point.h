@@ -3,144 +3,341 @@
 
 #include "statistic_tools.h"
 #include "eigen_tools.h"
+#include <cassert>
+
+/*
+ *  @license GPL
+ *  @author Benjamin Lefaudeux (blefaudeux at github)
+ *  @file sigma_point.h
+ *  @brief Implements a class of sigma points, to be used with UKF
+ *  @version 1.0
+ *  @date 12-11-2013
+ */
+
 
 using namespace Eigen;
 using namespace std;
+using namespace qukf;
 
 /*
  * Vector space sigma point
  */
+
+template <typename T>
 class SigmaPoints {
-  private :
-    int _dim;
-    float _kappa; // Sigma distribution parameters
-    float _weight;
-    /*
-     * State estimate
-     */
-    MatrixXf _mean_reference;
-    MatrixXf _mean_predicted;
-    MatrixXf _mean_measure;
+    public:
+        SigmaPoints( MatX<T> const &mean,
+                     MatX<T> const  &cov,
+                     float kappa) {
 
-    MatrixXf _cov_reference;          // Covariance of the initial state
-    MatrixXf _cov_predicted;          // Covariance of the predicted state
-    MatrixXf _cov_measure;            // Covariance within measured points
-    MatrixXf _cov_cross_pred_meas;    // Covariance between propagated and measured points  (~Measurement noise)
-    MatrixXf _cov_cross_pred_state;   // Covariance between propagated and initial points   (~Process noise)
+            _dim   = mean.rows ();
 
-    /*
-     *  Sigma points
-     */
-    vector < MatrixXf > _point_predicted;
-    vector < MatrixXf > _point_reference;
-    vector < MatrixXf > _point_measure;
+            _mean_reference   = mean;
 
-    vector <float> _weight_mean;
-    vector <float> _weight_cov;
+            _cov_reference        = cov;
+            _cov_measure          = cov; // Useless ?
+            _cov_cross_pred_meas  = cov; // Useless ?
+            _cov_cross_pred_state = cov; // Useless ?
 
-    /*
-     *  Functions (pointers)
-     */
-    void (*_propagateFunc)(const MatrixXf &, MatrixXf &);
-    void (*_measurementFunc)(const MatrixXf &, MatrixXf &);
+            _kappa  = kappa;
 
-    /*!
-     * \brief updateMean :
-     * Update the -mean field, considering the current state of sigma points
-     */
-    void updateMean(const std::vector < MatrixXf > &sigma_points,
-                    MatrixXf &mean);
+            // Create sigma points distribution (Unscented Transform)
+            computeSigmaPoints ();
 
-    /*!
-     * \brief updateCov :
-     * Update the -cov matrix, considering the current state of sigma points
-     */
-    void updateCov(const vector < MatrixXf > &sigma_points_1, const MatrixXf &mean_1,
-                   const vector < MatrixXf > &sigma_points_2, const MatrixXf &mean_2,
-                   MatrixXf &cov);
+            _propagateFunc = NULL;
+            _measurementFunc = NULL;
+        }
 
 
-  public :
-    /*
-     *  Constructors
-     */
-    SigmaPoints(const MatrixXf &_mean,
-                const MatrixXf &_cov,
-                float kappa);
-
-
-
-    /*
-     *  Methods
-     */
-
-    /*!
+        /*!
      * \brief computeSigmaPoints
      * Update the set of sigma points, knowing mean, cov, and dispersion parameters
      * // Unscented Transform //
      */
-    void computeSigmaPoints();
+        void computeSigmaPoints() {
+            int n_sigma_points = 2 * _dim + 1;
 
-    /*!
+            _point_reference.resize(n_sigma_points);
+            _point_predicted.resize(n_sigma_points);
+            _point_measure.resize(n_sigma_points);
+            _weight_mean.resize (n_sigma_points);
+            _weight_cov.resize (n_sigma_points);
+
+            // Mean
+            _point_reference[0]  = _mean_reference;
+            _weight_mean[0] = _kappa / (_dim + _kappa);
+            _weight_cov[0]  = _kappa / (_dim + _kappa);;
+
+            // Compute "square root matrix" for covariance to get sigma points
+            LLT <MatX<T>> lltOfCov(_cov_reference);
+            MatX<T> L = lltOfCov.matrixL ();
+
+            // Distributed points..
+            for (int i=1; i<=_dim; ++i) {
+                // Sigma point position
+                _point_reference[i  ]       = _mean_reference +  L.col (i-1) * sqrt(_dim + _kappa);
+                _point_reference[_dim + i]  = _mean_reference -  L.col (i-1) * sqrt(_dim + _kappa);
+
+                // Weights : same weights for everyone right now..
+                _weight_mean[i]       = 1.f / (2.f * (_kappa + _dim));
+                _weight_mean[_dim + i] = _weight_mean[i];
+
+                _weight_cov[i]        = 1.f / (2.f * (_kappa + _dim));
+                _weight_cov[_dim + i]  = _weight_cov[i];
+            }
+        }
+
+        /*!
      * \brief getState
      * \param _mean
      * \param _cov
      */
-    void getState(MatrixXf &mean,
-                  MatrixXf &cov) const;
+        void getState(MatX<T> &mean,
+                      MatX<T> &cov) const {
+            mean  = _mean_reference;
+            cov   = _cov_reference;
+        }
 
-    /*!
+        /*!
      * \brief getMeasuredState
      * \param mean
      * \param cov
      * \param cov_cross
      */
-    void getMeasuredState(MatrixXf &mean,
-                          MatrixXf &cov_measure,
-                          MatrixXf &cov_cross) const;
+        void getMeasuredState(MatX<T> &mean,
+                              MatX<T> &cov_measure,
+                              MatX<T> &cov_cross) const {
+            mean        = _mean_measure;
+            cov_measure = _cov_measure;
+            cov_cross   = _cov_cross_pred_meas;
+        }
 
-    /*!
+        /*!
      * \brief getPredictedState
      * \param mean
      * \param cov
      * \param cov_cross
      */
-    void getPredictedState(MatrixXf &mean,
-                           MatrixXf &cov,
-                           MatrixXf &cov_cross) const;
+        void getPredictedState(MatX<T> &mean,
+                               MatX<T> &cov,
+                               MatX<T> &cov_cross) const {
+            mean      = _mean_predicted;
+            cov       = _cov_predicted;
+            cov_cross = _cov_cross_pred_state;
+        }
 
-    /*!
+        /*!
      * \brief measureSigmaPoints : project the sigma points on the measurement space
      * populates the _point_measurement_space vector
      */
-    void measureSigmaPoints();
+        void measureSigmaPoints() {
+            if (_measurementFunc == NULL) {
+                THROW_ERR("Sigma points : measurement function undefined");
+            }
 
-    /*!
+            _weight = 0.f;
+
+            // Compute the projection of the sigma points onto the measurement space
+            _point_measure.resize (_point_predicted.size ());
+
+            for (unsigned int i=0; i<_point_predicted.size (); ++i) {
+                _measurementFunc(_point_predicted[i], _point_measure[i]);
+            }
+
+            // Compute the mean of the measured points :
+            _mean_measure.setZero (_dim, 1);
+            for (unsigned int i=0; i<_point_measure.size (); ++i) {
+                _mean_measure += _point_measure[i] * _weight_mean[i];
+                _weight += _weight_mean[i];
+            }
+
+            if (_weight != 0.f) {
+                _mean_measure /= _weight;
+            }
+
+            // Compute the intrinsic covariance of the measured points :
+            _cov_measure.setZero (_dim, _dim);
+            _weight = 0.f;
+
+            for (unsigned int i=0; i<_point_measure.size (); ++i) {
+                _cov_measure += _weight_cov[i] * ((_point_measure[i] - _mean_measure)
+                                                  * (_point_measure[i].transpose() - _mean_measure.transpose()));
+
+                _weight += _weight_cov[i];
+            }
+
+            if (_weight != 0.f) {
+                _cov_measure /= _weight;
+            }
+
+            // Compute the crossed covariance between measurement space and intrisic space
+            _cov_cross_pred_meas.setZero (_dim, _dim);
+
+            for (unsigned int i=0; i<_point_predicted.size (); ++i) {
+                _cov_cross_pred_meas += _weight_cov[i] * ((_point_measure[i] - _mean_measure)
+                                                          * (_point_predicted[i].transpose() - _mean_predicted.transpose()));
+            }
+
+            if (_weight != 0.f) {
+                _cov_cross_pred_meas /= _weight;
+            }
+        }
+
+
+        /*!
      * \brief propagateSigmaPoints
      */
-    void propagateSigmaPoints();
+        void propagateSigmaPoints() {
+            if (_propagateFunc == NULL) {
+              THROW_ERR("SPoint : Invalid propagation function");
+            }
 
-    /*!
+            // Propagate existing set of points (supposed to be representative)
+            _point_predicted.resize(_point_reference.size());
+
+            unsigned  int i=0;
+            while (i < this->_point_reference.size()) {
+              _propagateFunc(_point_reference[i], _point_predicted[i]);
+              ++i;
+            }
+
+            // Update statistics
+            updateMean(_point_predicted,
+                       _mean_predicted);
+
+            updateCov (_point_predicted,
+                       _mean_predicted,
+                       _point_predicted,
+                       _mean_predicted,
+                       _cov_predicted);
+
+            updateCov (_point_predicted,
+                       _mean_predicted,
+                       _point_reference,
+                       _mean_reference,
+                       _cov_cross_pred_state);
+        }
+
+        /*!
      * \brief setState
      * \param _mean
      * \param _cov
      */
-    void setState(const MatrixXf &mean,
-                  const MatrixXf &cov);
+        void setState(const MatX<T> &mean,
+                      const MatX<T> &cov) {
+            _mean_reference = mean;
+            _cov_reference  = cov;
 
-    /*!
+            computeSigmaPoints ();
+        }
+
+        /*!
      * \brief setPropagationFunction :
      *  Define  the function used to propagate the sigma points
      *  The propagation function parameters apply on the state vector
      */
-    void setPropagationFunction(void (*_prop_function)(const MatrixXf &, MatrixXf &));
+        void setPropagationFunction(void (*_prop_function)(const MatX<T> &, MatX<T> &)) {
+            _propagateFunc = _prop_function;
+        }
 
-    /*!
+        /*!
      * \brief setMeasurementFunction :
      *  Define  the function used to project the sigma points on measurement space
      *  The measurement function parameters apply on the state vector
      */
-    void setMeasurementFunction(void (*meas_function)(const MatrixXf &, MatrixXf &));
+        void setMeasurementFunction(void (*meas_function)(const MatX<T> &, MatX<T> &)) {
+            _measurementFunc = meas_function;
+        }
+
+    private:
+
+        /*
+     *  Functions (pointers) // TODO: Move to C++11 style functors
+     */
+        void (*_propagateFunc)(const MatX<T> &, MatX<T> &);
+        void (*_measurementFunc)(const MatX<T> &, MatX<T> &);
+
+        /*!
+     * \brief updateMean :
+     * Update the -mean field, considering the current state of sigma points
+     */
+        void updateMean(const std::vector < MatX<T> > &sigma_points,
+                        MatX<T> &mean) {
+            mean.setZero (_dim, 1);
+
+            _weight = 0.f;
+
+            unsigned int i = 0;
+
+            while (i < sigma_points.size ()) {
+              mean += sigma_points[i] * _weight_mean[i];
+
+              _weight += _weight_mean[i];
+              ++i;
+            }
+
+            // Normalize weights
+            if (_weight != 0.f) {
+              mean /= _weight;
+            }
+        }
+
+        /*!
+     * \brief updateCov :
+     * Update the -cov matrix, considering the current state of sigma points
+     */
+        void updateCov(const vector < MatX<T> > &sigma_points_1, const MatX<T> &mean_1,
+                       const vector < MatX<T> > &sigma_points_2, const MatX<T> &mean_2,
+                       MatX<T> &cov) {
+            // Deal with mistakes...
+            if (mean_1.cols() != mean_2.cols()) {
+              THROW_ERR("SPoints : vectors have different sizes");
+            }
+
+            // Compute inter-state covariance
+            cov.setZero (_dim, _dim);
+
+            _weight = 0.f;
+
+            for (unsigned int i=0; i<_point_predicted.size (); ++i) {
+              cov += _weight_cov[i] * ((sigma_points_1[i] - mean_1)
+                                       * (sigma_points_2[i].transpose() - mean_2.transpose()));
+
+              _weight += _weight_cov[i];
+            }
+
+            // Normalize weights
+            if (_weight != 0.f) {
+              cov /= _weight;
+            }
+        }
+
+    private :
+        int _dim; // Move to template
+        float _kappa; // Sigma distribution parameters
+        float _weight;
+        /*
+     * State estimate
+     */
+        MatX<T> _mean_reference;
+        MatX<T> _mean_predicted;
+        MatX<T> _mean_measure;
+
+        MatX<T> _cov_reference;          // Covariance of the initial state
+        MatX<T> _cov_predicted;          // Covariance of the predicted state
+        MatX<T> _cov_measure;            // Covariance within measured points
+        MatX<T> _cov_cross_pred_meas;    // Covariance between propagated and measured points  (~Measurement noise)
+        MatX<T> _cov_cross_pred_state;   // Covariance between propagated and initial points   (~Process noise)
+
+        /*
+     *  Sigma points
+     */
+        vector < MatX<T> > _point_predicted;
+        vector < MatX<T> > _point_reference;
+        vector < MatX<T> > _point_measure;
+
+        vector <float> _weight_mean;
+        vector <float> _weight_cov;
 };
 
 #endif // SIGMAPOINT_H
