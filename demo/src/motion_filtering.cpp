@@ -114,12 +114,15 @@ MotionEstimation::MotionEstimation(const float *variable,
     _measurement_noise *= ukf_measure_noise;
 
     // Allocate UKF and set propagation function
+    std::function<void(MatXf const &, MatXf &)> meas = meas_function;
+    std::function<void(MatXf const &, MatXf &)> prop = pointPropagation_speed;
+
     filter = new UKF<float>(_measure,
                             _initial_cov,
                             _model_noise,
                             _measurement_noise,
-                            &meas_function,
-                            &pointPropagation_speed,
+                            meas,
+                            prop,
                             ukf_kappa);
 
     _measure_latest = _measure;
@@ -183,6 +186,9 @@ MotionEstimation::MotionEstimation(const float *speed,
     _measurement_q_noise *= ukf_measure_q_noise;
 
     // Allocate UKF and set propagation function
+    std::function<void(MatXf const &, MatXf &)> meas = meas_function;
+    std::function<void(MatXf const &, MatXf &)> prop = pointPropagation_speed;
+
     filter = new UKF<float>(_measure.block(0,0, 3,1),
                             _measure.block(3,0, 3,1),
                             _initial_cov,
@@ -191,8 +197,8 @@ MotionEstimation::MotionEstimation(const float *speed,
                             _model_q_noise,
                             _measurement_noise,
                             _measurement_q_noise,
-                            &meas_function,
-                            &pointPropagation_speed,
+                            meas,
+                            prop,
                             &meas_q_function,
                             &pointPropagation_angularSpeed,
                             ukf_kappa,

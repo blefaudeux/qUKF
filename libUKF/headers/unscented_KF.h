@@ -4,7 +4,7 @@
 #include "sigma_point.h"
 #include "sigma_q_point.h"
 #include <memory>
-
+#include <functional>
 
 /*
  *  @license GPL
@@ -15,6 +15,7 @@
  */
 
 using namespace Eigen;
+using namespace std;
 
 /*
  * Quaternion tools ...
@@ -34,12 +35,12 @@ class UKF
 {
     public:
 
-        UKF(const MatX<T> &initial_state,
-            const MatX<T> &initial_cov,
-            const MatX<T> &model_noise,
-            const MatX<T> &measurement_noise,
-            void (*_meas_function)(const MatX<T> &, MatX<T> &),
-            void (*_prop_function)(const MatX<T> &, MatX<T> &),
+        UKF(MatX<T> const &initial_state,
+            MatX<T> const &initial_cov,
+            MatX<T> const &model_noise,
+            MatX<T> const &measurement_noise,
+            function<void(const MatX<T> &, MatX<T> &)> & meas_function,
+            function<void(const MatX<T> &, MatX<T> &)> & prop_function,
             T alpha)
         {
             m_q_particles.reset();
@@ -82,8 +83,8 @@ class UKF
 
             // Allocate particles (we already know the dimension)
             m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
-            m_particles->setMeasurementFunction (_meas_function);
-            m_particles->setPropagationFunction (_prop_function);
+            m_particles->setMeasurementFunction (meas_function);
+            m_particles->setPropagationFunction (prop_function);
 
             // Standard "vector space" UKF, no quaternions
             b_use_quaternions = false;
@@ -98,8 +99,8 @@ class UKF
             MatX<T> const &process_q_noise,
             MatX<T> const &measurement_noise,
             MatX<T> const &measurement_q_noise,
-            void (*_meas_function)(const MatX<T> &, MatX<T> &),
-            void (*_prop_function)(const MatX<T> &, MatX<T> &),
+            function<void(const MatX<T> &, MatX<T> &)> & meas_function,
+            function<void(const MatX<T> &, MatX<T> &)> & prop_function,
             void (*_meas_Qfunction)(const Quaternionf &, Quaternionf &),
             void (*_prop_Qfunction)(const Quaternionf &, Quaternionf &),
             T kappa, T kappa_q) {
@@ -160,8 +161,8 @@ class UKF
 
             // Allocate particles and set measurement and propagation functions
             m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
-            m_particles->setMeasurementFunction (_meas_function);
-            m_particles->setPropagationFunction (_prop_function);
+            m_particles->setMeasurementFunction (meas_function);
+            m_particles->setPropagationFunction (prop_function);
 
             // Allocate quaternion particles and set measurement and propagation functions
             m_q_particles.reset( new SigmaQPoints(k_state_q_post.block(0,0, 3,1),
@@ -424,8 +425,8 @@ class UKF
 
         T m_kappa, m_kappa_q;
 
-        std::unique_ptr<SigmaPoints<float>> m_particles;
-        std::unique_ptr<SigmaQPoints> m_q_particles;
+        unique_ptr<SigmaPoints<float>> m_particles;
+        unique_ptr<SigmaQPoints> m_q_particles;
 
         /*
      *  State vector includes (excepting quaternions)
