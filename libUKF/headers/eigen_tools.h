@@ -33,6 +33,9 @@ namespace qukf {
     template <typename T>
     using MatX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
+    template <typename T, size_t Rows, size_t Cols>
+    using Mat = Eigen::Matrix<T, Rows, Cols>;
+
     using MatXf = Eigen::MatrixXf;
 
     float pseudo_inv(const Eigen::MatrixXf *mat_in,

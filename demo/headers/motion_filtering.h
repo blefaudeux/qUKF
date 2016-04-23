@@ -11,7 +11,7 @@ class MotionEstimation
     std::vector<float> past_positions;
     std::vector<float[3]> past_speed;
 
-    UKF<float> *filter;
+    UKF<float,6,6> *filter;
 
     MatrixXf _measure;
     MatrixXf _initial_cov;

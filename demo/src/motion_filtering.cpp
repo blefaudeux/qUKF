@@ -60,22 +60,10 @@ void pointPropagation_angularSpeed(const Quaternionf &q_in, Quaternionf &q_out) 
   */
 }
 
-/*!
- * \brief meas_function : defines the measurement function which will be used in the UKF
- * \warning Keep the UKF state vector in mind when designing it !
- */
-void meas_function(const MatrixXf &vec_in, MatrixXf &vec_measured) {
-    vec_measured.resizeLike(vec_in);
-
-    // For now we just keep the points as they are
-    for (int i=0; i<vec_in.rows(); ++i) {
-        vec_measured(i,0) = vec_in(i,0);
-    }
+void meas_function(const Vec<float,3> &vec_in, Vec<float,3> &vec_measured) {
+    vec_measured = vec_in;
 }
 
-/*!
- * \brief meas_q_function : defines the measurement function which will be used in the UKF
- */
 void meas_q_function(const Quaternionf &q_in, Quaternionf &q_measured) {
     q_measured = q_in;
 }
@@ -114,16 +102,16 @@ MotionEstimation::MotionEstimation(const float *variable,
     _measurement_noise *= ukf_measure_noise;
 
     // Allocate UKF and set propagation function
-    std::function<void(MatXf const &, MatXf &)> meas = meas_function;
-    std::function<void(MatXf const &, MatXf &)> prop = pointPropagation_speed;
+    qukf::UKF<float, 6,6>::MeasurementFunc meas = meas_function;
+    qukf::UKF<float, 6,6>::PropagationFunc prop = pointPropagation_speed;
 
-    filter = new UKF<float>(_measure,
-                            _initial_cov,
-                            _model_noise,
-                            _measurement_noise,
-                            meas,
-                            prop,
-                            ukf_kappa);
+    filter = new UKF<float, 6, 6>(_measure,
+                                  _initial_cov,
+                                  _model_noise,
+                                  _measurement_noise,
+                                  meas,
+                                  prop,
+                                  ukf_kappa);
 
     _measure_latest = _measure;
     _filter_angular_speed = false;
@@ -186,10 +174,10 @@ MotionEstimation::MotionEstimation(const float *speed,
     _measurement_q_noise *= ukf_measure_q_noise;
 
     // Allocate UKF and set propagation function
-    std::function<void(MatXf const &, MatXf &)> meas = meas_function;
-    std::function<void(MatXf const &, MatXf &)> prop = pointPropagation_speed;
+    UKF<float,3,3>::MeasurementFunc meas = meas_function;
+    UKF<float,3,3>::PropagationFunc prop = pointPropagation_speed;
 
-    filter = new UKF<float>(_measure.block(0,0, 3,1),
+    filter = new UKF<float,3,3>(_measure.block(0,0, 3,1),
                             _measure.block(3,0, 3,1),
                             _initial_cov,
                             _initial_q_cov,
