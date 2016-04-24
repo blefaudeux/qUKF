@@ -64,6 +64,10 @@ void meas_function(const Vec<float,3> &vec_in, Vec<float,3> &vec_measured) {
     vec_measured = vec_in;
 }
 
+void meas_function(const Vec<float,6> &vec_in, Vec<float,6> &vec_measured) {
+    vec_measured = vec_in;
+}
+
 void meas_q_function(const Quaternionf &q_in, Quaternionf &q_measured) {
     q_measured = q_in;
 }

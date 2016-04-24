@@ -76,7 +76,7 @@ namespace qukf {
                 m_kappa = alpha;
 
                 // Allocate particles (we already know the dimension)
-                m_particles.reset( new SigmaPoints<float>(k_state_post, k_cov_post, m_kappa));
+                m_particles.reset( new SigmaPoints<float, DimState, DimMeas>(k_state_post, k_cov_post, m_kappa));
                 m_particles->setMeasurementFunction (meas_function);
                 m_particles->setPropagationFunction (prop_function);
 
@@ -392,7 +392,7 @@ namespace qukf {
 
             T m_kappa, m_kappa_q;
 
-            unique_ptr<SigmaPoints<float>> m_particles;
+            unique_ptr<SigmaPoints<float, DimState, DimMeas>> m_particles;
             unique_ptr<SigmaQPoints> m_q_particles;
 
             MatSquare<T, DimState>  k_process_noise;
