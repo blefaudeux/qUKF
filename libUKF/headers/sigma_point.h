@@ -31,8 +31,9 @@ class SigmaPoints {
         typedef MatSquare<T, DimState> MatCovState;
         typedef MatSquare<T, DimMeas>  MatCovMeas;
 
-        typedef function<void(VecMeas const &, VecMeas &)> MeasurementFunc;
-        typedef function<void(VecState const &, VecState &)> PropagationFunc;
+    public:
+        typedef function<VecMeas(VecMeas const &)> MeasurementFunc;
+        typedef function<VecState(VecState const &)> PropagationFunc;
 
     public:
         SigmaPoints( VecState const &mean, Mat<T, DimState, DimMeas> const  &cov, float kappa)
@@ -85,20 +86,20 @@ class SigmaPoints {
             }
         }
 
-        void getState(MatX<T> &mean, MatX<T> &cov) const
+        void getState(VecState &mean, MatCovState &cov) const
         {
             mean  = m_mean_ref;
             cov   = m_cov_ref;
         }
 
-        void getMeasuredState(MatX<T> &mean, MatX<T> &cov_measure, MatX<T> &cov_cross) const
+        void getMeasuredState(VecMeas &mean, MatCovMeas &cov_measure, MatCovState &cov_cross) const
         {
             mean        = m_mean_meas;
             cov_measure = m_cov_meas;
             cov_cross   = m_cov_x_pred_meas;
         }
 
-        void getPredictedState(MatX<T> &mean, MatX<T> &cov, MatX<T> &cov_cross) const
+        void getPredictedState(VecState &mean, MatCovState &cov, MatCovState &cov_cross) const
         {
             mean      = m_mean_pred;
             cov       = m_cov_predicted;
@@ -107,52 +108,23 @@ class SigmaPoints {
 
         void measureSigmaPoints()
         {
-            float weight = 0.f;
-
             // Compute the projection of the sigma points onto the measurement space
             m_point_meas.resize (m_point_pred.size ());
 
             for (unsigned int i=0; i<m_point_pred.cols(); ++i) {
-                _measurementFunc(m_point_pred.col(i), m_point_meas.col(i));
+                m_point_meas.col(i) = _measurementFunc(m_point_pred.col(i));
             }
 
             // Compute the mean of the measured points :
-            m_mean_meas.setZero (DimState, 1);
-            for (unsigned int i=0; i<m_point_meas.cols(); ++i) {
-                m_mean_meas += m_point_meas.col(i) * m_weight_mean[i];
-                weight += m_weight_mean[i];
-            }
-
-            if (weight != 0.f) {
-                m_mean_meas /= weight;
-            }
+            updateMean(m_point_meas, m_mean_meas);
 
             // Compute the intrinsic covariance of the measured points :
-            m_cov_meas.setZero(DimMeas, DimMeas);
-            weight = 0.f;
-
-            for (unsigned int i=0; i<m_point_meas.size (); ++i) {
-                m_cov_meas += m_weight_cov[i] * ((m_point_meas[i] - m_mean_meas)
-                                                * (m_point_meas[i].transpose() - m_mean_meas.transpose()));
-
-                weight += m_weight_cov[i];
-            }
-
-            if (weight != 0.f) {
-                m_cov_meas /= weight;
-            }
+            auto const zm_meas = m_point_meas.colwise() - m_mean_meas;
+            m_cov_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_meas.transpose();
 
             // Compute the crossed covariance between measurement space and intrisic space
-            m_cov_x_pred_meas.setZero (DimState, DimState);
-
-            for (unsigned int i=0; i<m_point_pred.size (); ++i) {
-                m_cov_x_pred_meas += m_weight_cov[i] * ((m_point_meas[i] - m_mean_meas)
-                                                           * (m_point_pred[i].transpose() - m_mean_pred.transpose()));
-            }
-
-            if (weight != 0.f) {
-                m_cov_x_pred_meas /= weight;
-            }
+            auto const zm_pred = m_point_pred.colwise() - m_mean_pred;
+            m_cov_x_pred_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose();
         }
 
         void propagateSigmaPoints() {
@@ -160,9 +132,8 @@ class SigmaPoints {
             m_point_pred.resize(m_point_ref.size());
 
             unsigned  int i=0;
-            while (i < this->m_point_ref.size()) {
-                _propagateFunc(m_point_ref[i], m_point_pred[i]);
-                ++i;
+            while (i < m_point_ref.cols()) {
+                m_point_pred.col(i) = _propagateFunc(m_point_ref.col(i++));
             }
 
             // Update statistics
@@ -177,7 +148,7 @@ class SigmaPoints {
                        m_cov_x_pred_state);
         }
 
-        void setState(const MatX<T> &mean, const MatX<T> &cov)
+        void setState(VecState const & mean, MatCovState const & cov)
         {
             m_mean_ref = mean;
             m_cov_ref  = cov;

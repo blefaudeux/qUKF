@@ -26,9 +26,8 @@ namespace qukf {
             typedef Vec<T, DimState> VecState;
             typedef Vec<T, DimMeas> VecMeas;
 
-            typedef function<void(VecMeas const &, VecMeas &)> MeasurementFunc;
-            typedef function<void(VecState const &, VecState &)> PropagationFunc;
-
+            typedef typename SigmaPoints<T,DimState, DimMeas>::MeasurementFunc MeasurementFunc;
+            typedef typename SigmaPoints<T,DimState, DimMeas>::PropagationFunc PropagationFunc;
 
         public:
 
@@ -49,8 +48,8 @@ namespace qukf {
                 k_state_pre.setZero (dim_ext, 1);
                 k_state_pre.block (0,0, initial_state.rows (), 1) = initial_state;
 
-                k_cov_pre.setZero (dim_ext, dim_ext);
-                k_cov_pre.block<DimState, DimState> (0,0) = initial_cov;
+                k_cov_pre.setZero();
+                k_cov_pre.block(0, 0, DimState, DimState) = initial_cov;
 
                 k_cov_pre.block (DimState,DimState, model_noise.cols (), model_noise.cols ()) = model_noise;
                 k_cov_pre.block (DimState + model_noise.cols (),

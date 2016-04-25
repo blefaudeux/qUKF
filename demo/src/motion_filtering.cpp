@@ -10,14 +10,7 @@
  */
 
 
-/*!
- * \brief pointPropagation : propagation function for sigma points
- *  we propagate linear coordinates knowing speed, no angular values for now
- *
- * \param points_in
- * \param points_out
- */
-void pointPropagation_speed(const MatrixXf &points_in, MatrixXf &points_out) {
+Vec<float,6> pointPropagation_speed(Vec<float,6> const &points_in) {
     // Constant acceleration model... :
     MatrixXf prop_matrix;
     int dim = points_in.rows ();
@@ -26,8 +19,7 @@ void pointPropagation_speed(const MatrixXf &points_in, MatrixXf &points_out) {
     prop_matrix(1,4) = 1.f;
     prop_matrix(2,5) = 1.f;
 
-    points_out.resizeLike(points_in);
-    points_out = prop_matrix * points_in;
+    return prop_matrix * points_in;
 }
 
 void pointPropagation_angularSpeed(const Quaternionf &q_in, Quaternionf &q_out) {
@@ -64,8 +56,8 @@ void meas_function(const Vec<float,3> &vec_in, Vec<float,3> &vec_measured) {
     vec_measured = vec_in;
 }
 
-void meas_function(const Vec<float,6> &vec_in, Vec<float,6> &vec_measured) {
-    vec_measured = vec_in;
+Vec<float,6> meas_function6(const Vec<float,6> &vec_in) {
+    return vec_in;
 }
 
 void meas_q_function(const Quaternionf &q_in, Quaternionf &q_measured) {
@@ -106,7 +98,7 @@ MotionEstimation::MotionEstimation(const float *variable,
     _measurement_noise *= ukf_measure_noise;
 
     // Allocate UKF and set propagation function
-    qukf::UKF<float, 6,6>::MeasurementFunc meas = meas_function;
+    qukf::UKF<float, 6,6>::MeasurementFunc meas = meas_function6;
     qukf::UKF<float, 6,6>::PropagationFunc prop = pointPropagation_speed;
 
     filter = new UKF<float, 6, 6>(_measure,
@@ -121,84 +113,6 @@ MotionEstimation::MotionEstimation(const float *variable,
     _filter_angular_speed = false;
 }
 
-/*!
- * \brief MotionEstimation::MotionEstimation
- * \param pos
- * \param speed
- */
-MotionEstimation::MotionEstimation(const float *speed,
-                                   const float *angular_speed,
-                                   const float ukf_measure_noise = 1.f,
-                                   const float ukf_measure_q_noise = 1.f,
-                                   const float ukf_process_noise = 1.f,
-                                   const float ukf_process_q_noise = 1.f,
-                                   const float ukf_kappa = 0.f,
-                                   const float ukf_kappa_q = 0.f) {
-
-    // Constructor for a new pose estimator
-    // Contains 2 types of variables :
-    // - initial speed
-    // - initial angular speed
-
-    _measure.setZero (6,1);
-    _measure(0,0) = speed[0];
-    _measure(1,0) = speed[1];
-    _measure(2,0) = speed[2];
-
-    _measure(3,0) = angular_speed[0];
-    _measure(4,0) = angular_speed[1];
-    _measure(5,0) = angular_speed[2];
-
-    // Vector space noise matrices
-    _initial_cov.setIdentity(3,3);
-    _model_noise.setIdentity(3,3);
-    _measurement_noise.setIdentity(3,3);
-
-    _initial_cov.block(0,0,3,3)       *= ukf_measure_noise;
-    _model_noise.block(0,0,3,3)       *= ukf_process_noise;
-    _measurement_noise.block(0,0,3,3) *= ukf_measure_noise;
-
-    // DEBUG
-    // Limit moves on the x/y axis :
-    _model_noise.block(0,0,2,2)       /= 6.f;
-    // DEBUG
-
-    // Quaternion space noise matrices
-    _initial_q_cov.setIdentity(3,3);
-    _model_q_noise.setIdentity(3,3);
-    _measurement_q_noise.setIdentity(3,3);
-
-    _initial_q_cov *= ukf_measure_q_noise;
-    _model_q_noise *= ukf_process_q_noise;
-    // DEBUG
-    // Limit moves on the x/y axis :
-    _model_q_noise.block(0,0,1,1)       /= 3.f;
-    _model_q_noise.block(2,2,1,1)       /= 3.f;
-    // DEBUG
-    _measurement_q_noise *= ukf_measure_q_noise;
-
-    // Allocate UKF and set propagation function
-    UKF<float,3,3>::MeasurementFunc meas = meas_function;
-    UKF<float,3,3>::PropagationFunc prop = pointPropagation_speed;
-
-    filter = new UKF<float,3,3>(_measure.block(0,0, 3,1),
-                            _measure.block(3,0, 3,1),
-                            _initial_cov,
-                            _initial_q_cov,
-                            _model_noise,
-                            _model_q_noise,
-                            _measurement_noise,
-                            _measurement_q_noise,
-                            meas,
-                            prop,
-                            &meas_q_function,
-                            &pointPropagation_angularSpeed,
-                            ukf_kappa,
-                            ukf_kappa_q);
-
-    _measure_latest = _measure;
-    _filter_angular_speed = true;
-}
 
 // TODO: Add a constructor for an estimator taking angles into account !
 
