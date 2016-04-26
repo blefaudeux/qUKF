@@ -80,14 +80,13 @@ MotionEstimation::MotionEstimation(const float *variable,
     // - initial position
     // - initial speed
 
-    _measure.setZero (6,1);
-    _measure(0,0) = variable[0];
-    _measure(1,0) = variable[1];
-    _measure(2,0) = variable[2];
-    _measure(3,0) = variable[0];
-    _measure(4,0) = variable[1];
-    _measure(5,0) = variable[2];
-
+    _measure.setZero();
+    _measure(0) = variable[0];
+    _measure(1) = variable[1];
+    _measure(2) = variable[2];
+    _measure(3) = variable[0];
+    _measure(4) = variable[1];
+    _measure(5) = variable[2];
 
     _initial_cov.setIdentity(6,6);
     _model_noise.setIdentity(6,6);

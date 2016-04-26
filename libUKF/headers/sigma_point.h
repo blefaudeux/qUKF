@@ -56,10 +56,10 @@ class SigmaPoints {
             int const n_sigma_points = 2 * DimState + 1;
 
             m_point_ref.setZero(DimState, n_sigma_points);
-            m_point_pred.resize(n_sigma_points);
-            m_point_meas.resize(n_sigma_points);
-            m_weight_mean.resize (n_sigma_points);
-            m_weight_cov.resize (n_sigma_points);
+            m_point_pred.setZero(DimState, n_sigma_points);
+            m_point_meas.setZero(DimMeas, n_sigma_points);
+            m_weight_mean.setZero();
+            m_weight_cov.setZero();
 
             // Mean
             m_point_ref.col(0)  = m_mean_ref;
@@ -72,7 +72,7 @@ class SigmaPoints {
 
             // Distributed points..
             // TODO : Rewrite this matricially !
-            for (int i=1; i<=DimState; ++i) {
+            for (unsigned i=1; i<=DimState; ++i) {
                 // Sigma point position
                 m_point_ref.col(i)              = m_mean_ref +  L.col(i-1) * sqrt(DimState + m_kappa);
                 m_point_ref.col(DimState + i)   = m_mean_ref -  L.col(i-1) * sqrt(DimState + m_kappa);
@@ -109,9 +109,7 @@ class SigmaPoints {
         void measureSigmaPoints()
         {
             // Compute the projection of the sigma points onto the measurement space
-            m_point_meas.resize (m_point_pred.size ());
-
-            for (unsigned int i=0; i<m_point_pred.cols(); ++i) {
+            for (unsigned i=0; i<m_point_pred.cols(); ++i) {
                 m_point_meas.col(i) = _measurementFunc(m_point_pred.col(i));
             }
 
@@ -127,13 +125,12 @@ class SigmaPoints {
             m_cov_x_pred_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose();
         }
 
-        void propagateSigmaPoints() {
+        void propagateSigmaPoints()
+        {
             // Propagate existing set of points (supposed to be representative)
-            m_point_pred.resize(m_point_ref.size());
-
-            unsigned  int i=0;
-            while (i < m_point_ref.cols()) {
-                m_point_pred.col(i) = _propagateFunc(m_point_ref.col(i++));
+            for(unsigned i=0; i < m_point_ref.cols(); ++i )
+            {
+                m_point_pred.col(i) = _propagateFunc(m_point_ref.col(i));
             }
 
             // Update statistics

@@ -13,7 +13,7 @@ class MotionEstimation
 
     UKF<float,6,6> *filter;
 
-    MatrixXf _measure;
+    UKF<float,6,6>::VecMeas _measure;
     MatrixXf _initial_cov;
     MatrixXf _model_noise;
     MatrixXf _measurement_noise;
