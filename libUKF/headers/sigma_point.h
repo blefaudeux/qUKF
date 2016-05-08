@@ -63,21 +63,18 @@ class SigmaPoints {
 
             // Mean
             m_point_ref.col(0)  = m_mean_ref;
-            m_weight_mean[0] = m_kappa / (DimState + m_kappa);
-            m_weight_cov[0]  = m_kappa / (DimState + m_kappa);;
+            m_weight_mean(0) = m_kappa / (DimState + m_kappa);
+            m_weight_cov(0)  = m_kappa / (DimState + m_kappa);;
 
             // Compute "square root matrix" for covariance to get sigma points
             LLT <MatX<T>> lltOfCov(m_cov_ref);
             MatX<T> L = lltOfCov.matrixL ();
 
-            // Distributed points..
-            // TODO : Rewrite this matricially !
+            // Distributed points.. | This can be tuned if needed
             for (unsigned i=1; i<=DimState; ++i) {
-                // Sigma point position
                 m_point_ref.col(i)              = m_mean_ref +  L.col(i-1) * sqrt(DimState + m_kappa);
                 m_point_ref.col(DimState + i)   = m_mean_ref -  L.col(i-1) * sqrt(DimState + m_kappa);
 
-                // Weights : same weights for everyone right now..
                 m_weight_mean[i]       = 1.f / (2.f * (m_kappa + DimState));
                 m_weight_mean[DimState + i] = m_weight_mean[i];
 
