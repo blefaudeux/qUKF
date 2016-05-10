@@ -10,7 +10,7 @@
  *  @author Benjamin Lefaudeux (blefaudeux at github)
  *  @file sigma_point.h
  *  @brief Implements a class of sigma points, to be used with UKF
- *  @version 1.0
+ *  @version 2.0
  *  @date 12-11-2013
  */
 
@@ -24,7 +24,8 @@ using namespace qukf;
  */
 
 template <typename T, size_t DimState, size_t DimMeas>
-class SigmaPoints {
+class SigmaPoints
+{
         typedef Vec<T, DimState> VecState;
         typedef Vec<T, DimMeas> VecMeas;
         typedef MatSquare<T, DimState> MatCovState;
@@ -35,14 +36,21 @@ class SigmaPoints {
         typedef function<VecState(VecState const &)> PropagationFunc;
 
     public:
-        SigmaPoints( VecState const &mean, Mat<T, DimState, DimMeas> const  &cov, float kappa)
+        SigmaPoints( VecState const &mean,
+                     Mat<T, DimState, DimMeas> const  &cov,
+                     Mat<T, DimState, DimMeas> const  &process_noise,
+                     Mat<T, DimState, DimMeas> const  &process_cross_noise,
+                     float kappa)
         {
             m_mean_ref   = mean;
 
             m_cov_ref        = cov;
-            m_cov_meas          = cov; // Useless ?
-            m_cov_x_pred_meas  = cov; // Useless ?
-            m_cov_x_pred_state = cov; // Useless ?
+            m_cov_meas         = cov;
+            m_cov_x_pred_meas  = cov;
+            m_cov_x_pred_state = cov;
+
+            m_process_noise = process_noise;
+            m_process_cross_noise = process_cross_noise;
 
             m_kappa  = kappa;
 
@@ -52,13 +60,13 @@ class SigmaPoints {
 
         void computeSigmaPoints()
         {
-            int const n_sigma_points = 2 * DimState + 1;
+            // The sigma points are generated over an extended state,
+            // as proposed by Julier and Uhlmann
 
-            m_point_ref.setZero(DimState, n_sigma_points);
-            m_point_pred.setZero(DimState, n_sigma_points);
-            m_point_meas.setZero(DimMeas, n_sigma_points);
-            m_weight_mean.setZero();
-            m_weight_cov.setZero();
+            int const n_sigma_points = 4 * DimState + 1;
+
+            m_point_ref.setZero(DimState * 2, n_sigma_points);
+            m_point_pred.setZero(DimState * 2, n_sigma_points);
 
             // Mean
             m_point_ref.col(0)  = m_mean_ref;
@@ -66,13 +74,27 @@ class SigmaPoints {
             m_weight_cov(0)  = m_kappa / (DimState + m_kappa);;
 
             // Compute "square root matrix" for covariance to get sigma points
-            LLT <MatX<T>> lltOfCov(m_cov_ref);
+            // TODO: Keep the main cov matrix constant, just update the "real" state part
+            Mat<T, 2 * DimState, 2 * DimState> covExt;
+            covExt.block<DimState, DimState>(0,0) = m_cov_ref;
+            covExt.block<DimState, DimState>(DimState,DimState) = m_process_noise;
+
+            covExt.block<DimState, DimState>(0,DimState) = m_process_cross_noise;
+            covExt.block<DimState, DimState>(DimState,0) = m_process_cross_noise;
+
+            LLT <MatX<T>> lltOfCov(covExt);
             MatX<T> L = lltOfCov.matrixL ();
 
             // Distributed points.. | This can be tuned if needed
-            for (unsigned i=1; i<=DimState; ++i) {
-                m_point_ref.col(i)              = m_mean_ref +  L.col(i-1) * sqrt(DimState + m_kappa);
-                m_point_ref.col(DimState + i)   = m_mean_ref -  L.col(i-1) * sqrt(DimState + m_kappa);
+            Vec<T, DimState * 2> meanExt;
+
+            meanExt.head<DimState>() = m_mean_ref;
+            meanExt.fill(T(0.)); // TODO: introduce the possibility to have noise bias
+
+            for (unsigned i=1; i <= 2*DimState; ++i)
+            {
+                m_point_ref.col(i)              = meanExt +  L.col(i-1) * sqrt(DimState + m_kappa);
+                m_point_ref.col(DimState + i)   = meanExt -  L.col(i-1) * sqrt(DimState + m_kappa);
 
                 m_weight_mean[i]       = 1.f / (2.f * (m_kappa + DimState));
                 m_weight_mean[DimState + i] = m_weight_mean[i];
@@ -182,6 +204,7 @@ class SigmaPoints {
 
         float   m_kappa; // Sigma distribution parameters
 
+        // State
         VecState    m_mean_ref;
         VecState    m_mean_pred;
         VecMeas     m_mean_meas;
@@ -190,14 +213,18 @@ class SigmaPoints {
         MatCovState                 m_cov_predicted;   // Covariance of the predicted state
         MatCovMeas                  m_cov_meas;        // Covariance within measured points
         MatCovState                 m_cov_x_pred_state; // Covariance between propagated and initial points   (~Process noise)
-        Mat<T, DimState, DimMeas>      m_cov_x_pred_meas;  // Covariance between propagated and measured points  (~Measurement noise)
+        Mat<T, DimState, DimMeas>   m_cov_x_pred_meas;  // Covariance between propagated and measured points  (~Measurement noise)
 
-        MatR<T, DimState>    m_point_pred;
-        MatR<T, DimState>    m_point_ref;
-        MatR<T, DimMeas>     m_point_meas;
+        MatCovState m_process_noise;
+        MatCovState m_process_cross_noise;
 
-        VecState m_weight_mean;
-        VecState m_weight_cov;
+        // Sigma points machinery
+        MatR<T, DimState * 2>   m_point_pred;
+        MatR<T, DimState * 2>   m_point_ref;
+        MatR<T, DimMeas>        m_point_meas;
+
+        Vec<T, DimState * 2> m_weight_mean;
+        Vec<T, DimState * 2> m_weight_cov;
 };
 
 #endif // SIGMAPOINT_H
