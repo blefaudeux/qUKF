@@ -1,7 +1,6 @@
 #ifndef SIGMAPOINT_H
 #define SIGMAPOINT_H
 
-#include "statistic_tools.h"
 #include "eigen_tools.h"
 #include <cassert>
 #include <functional>

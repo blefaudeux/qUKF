@@ -1,7 +1,6 @@
 #ifndef SIGMAQPOINT_H
 #define SIGMAQPOINT_H
 
-#include "statistic_tools.h"
 #include "eigen_tools.h"
 
 /*
@@ -29,8 +28,6 @@ class SigmaQPoints  {
   private :
     int _dim;
     float _kappa;
-
-    statisticTools *_st_tool;
 
     Quaternionf _q_mean_reference;
     Quaternionf _q_mean_predicted;
@@ -114,8 +111,6 @@ class SigmaQPoints  {
     SigmaQPoints(const Matrix<float, 3, 1> &angles_mean,
                  const Matrix<float, 3, 3> &angles_cov,
                  float kappa);
-
-    ~SigmaQPoints();
 
     // --------------------------------//
     // -- Intrinsic filtering logic -- //

@@ -61,8 +61,6 @@ namespace qukf {
                 k_state_post  = k_state_pre;
                 k_cov_post    = k_cov_pre;
 
-                k_cov_expected.setIdentity (dim_ext, dim_ext);
-
                 k_process_noise     = model_noise;
                 k_measurement_noise = measurement_noise;
 
@@ -130,8 +128,6 @@ namespace qukf {
                 // Set _post values
                 k_state_post = k_state_pre;
                 k_cov_post = k_cov_pre;
-
-                k_cov_expected.setIdentity (dim_ext, dim_ext);
 
                 k_process_noise = process_noise;
                 k_measurement_noise = measurement_noise;
@@ -411,7 +407,6 @@ namespace qukf {
 
             Mat<T, DimMeas, DimState>  k_cov_cross_pred_meas;
             Mat<T, DimMeas, DimState>  k_cov_cross_pred_ref;
-            MatSquare<T, DimState>  k_cov_expected;
 
             MatX<T>  k_cross_corr;
             MatX<T>  k_measure_extended;

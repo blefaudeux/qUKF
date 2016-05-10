@@ -1,5 +1,6 @@
 #include "sigma_q_point.h"
 
+
 /*
  *  @license GPL
  *  @author Benjamin Lefaudeux (blefaudeux at github)
@@ -21,18 +22,8 @@ SigmaQPoints::SigmaQPoints(const Matrix<float, 3, 1> &angles_mean,
   _mean_reference = angles_mean;
   _cov_reference = angles_cov;
 
-  // Deal with fucking rdm number generator
-  _st_tool = new statisticTools();
-
   // Reset a few matrices..
   _process_noise.setZero (3, 3);
-}
-
-
-SigmaQPoints::~SigmaQPoints () {
-  delete _st_tool;
-
-  // No need to handle Eigen matrices..
 }
 
 void SigmaQPoints::angleAxisNormalize(const AngleAxis <float> &input, AngleAxis <float> &output) {
