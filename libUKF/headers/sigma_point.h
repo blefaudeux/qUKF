@@ -71,12 +71,13 @@ class SigmaPoints
             // Mean
             m_point_ref.col(0)  = m_mean_ref;
             m_weight_mean(0) = m_kappa / (DimState + m_kappa);
-            m_weight_cov(0)  = m_kappa / (DimState + m_kappa);;
+            m_weight_cov(0)  = m_kappa / (DimState + m_kappa);
 
             // Compute "square root matrix" for covariance to get sigma points
             // TODO: Keep the main cov matrix constant, just update the "real" state part
-            Mat<T, 2 * DimState, 2 * DimState> covExt;
-            covExt.block<DimState, DimState>(0,0) = m_cov_ref;
+            int const dimExt = 2 * DimState;
+            Mat<T, dimExt, dimExt> covExt;
+            covExt.topLeftCorner<DimState, DimState>() = m_cov_ref;
             covExt.block<DimState, DimState>(DimState,DimState) = m_process_noise;
 
             covExt.block<DimState, DimState>(0,DimState) = m_process_cross_noise;

@@ -4,7 +4,6 @@
 #include <Eigen/Eigen>
 #include <vector>
 #include <stdio.h>
-#include "def.h"
 #include <iostream>
 #include <Eigen/StdVector>
 #include <math.h>

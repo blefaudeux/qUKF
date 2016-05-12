@@ -168,9 +168,11 @@ void MotionEstimation::update(const float *variable) {
 void MotionEstimation::update(const float *speed,
                               const float *angular_speed) {
 
-    if ((_measure_latest.rows () != 6) ||
-            (!_filter_angular_speed)){
-        THROW_ERR("Motion filtering : filter initialization went wrong");
+    if ((_measure_latest.rows () != 6)
+            || (!_filter_angular_speed))
+    {
+        std::printf("Motion filtering : filter initialization went wrong");
+        return;
     }
 
     // Get latest updated state :

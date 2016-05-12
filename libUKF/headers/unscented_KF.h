@@ -105,23 +105,28 @@ namespace qukf {
                 }
             }
 
-            void update(const MatX<T> &new_measure) {
+            void update(const MatX<T> &new_measure)
+            {
                 // Failsafe stupid tests
                 if (new_measure.rows () != DimState) {
-                    THROW_ERR("UKF : Wrong measure vector dimension\n");
+                    std::printf("UKF : Wrong measure vector dimension\n");
+                    return;
                 }
 
                 if (b_use_quaternions) {
-                    THROW_ERR("UKF : Filter including quaternions, you cannot just update vector values\n");
+                    std::printf("UKF : Filter including quaternions, you cannot just update vector values\n");
+                    return;
                 }
 
                 updateParticles (new_measure);
             }
 
-            void update (const VecMeas &vec_measure, const MatX<T> &angle_measure) {
-
-                if (!b_use_quaternions) {
-                    THROW_ERR("UKF : Vector-only filter, you cannot update quaternions\n");
+            void update (const VecMeas &vec_measure, const MatX<T> &angle_measure)
+            {
+                if (!b_use_quaternions)
+                {
+                    std::printf("UKF : Vector-only filter, you cannot update quaternions\n");
+                    return;
                 }
 
                 // Update Sigma points
