@@ -2,13 +2,6 @@
 #define EIGEN_TOOLS_H
 
 #include <Eigen/Eigen>
-#include <vector>
-#include <stdio.h>
-#include <iostream>
-#include <Eigen/StdVector>
-#include <math.h>
-
-using namespace std;
 
 namespace qukf {
     template <typename T, size_t Rows>
@@ -39,7 +32,6 @@ namespace qukf {
     using MatR = Eigen::Matrix<T, Rows, Eigen::Dynamic>;
 
     using MatXf = Eigen::MatrixXf;
-
 }
 
 #endif // EIGEN_TOOLS_H

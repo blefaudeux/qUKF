@@ -41,9 +41,6 @@ namespace qukf {
                  T alpha)
             {
 
-                // Take extended state vector into account / See Julier and Uhlmann original paper
-                int const dim_ext = 2*DimState + DimMeas;
-
                 // Initialize matrices
                 k_state_pre = initial_state;
                 k_cov_pre = initial_cov;
@@ -61,7 +58,11 @@ namespace qukf {
 
                 // Allocate particles
                 m_kappa = alpha;
-                m_particles.reset( new SigmaPoints<float, DimState*2, DimMeas>(k_state_post, k_cov_post, m_kappa));
+                m_particles.reset( new SigmaPoints<float, DimState, DimMeas>(k_state_post,
+                                                                               k_cov_post,
+                                                                               k_process_noise,
+                                                                               k_process_noise,
+                                                                               m_kappa));
                 m_particles->setMeasurementFunction( meas_function );
                 m_particles->setPropagationFunction( prop_function );
 

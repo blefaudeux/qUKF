@@ -77,11 +77,11 @@ class SigmaPoints
             // TODO: Keep the main cov matrix constant, just update the "real" state part
             int const dimExt = 2 * DimState;
             Mat<T, dimExt, dimExt> covExt;
-            covExt.topLeftCorner<DimState, DimState>() = m_cov_ref;
-            covExt.block<DimState, DimState>(DimState,DimState) = m_process_noise;
+            covExt.topLeftCorner(DimState,DimState) = m_cov_ref;
+            covExt.block(DimState,DimState, DimState, DimState) = m_process_noise;
 
-            covExt.block<DimState, DimState>(0,DimState) = m_process_cross_noise;
-            covExt.block<DimState, DimState>(DimState,0) = m_process_cross_noise;
+            covExt.block(0,DimState, DimState, DimState) = m_process_cross_noise;
+            covExt.block(DimState,0, DimState, DimState) = m_process_cross_noise;
 
             LLT <MatX<T>> lltOfCov(covExt);
             MatX<T> L = lltOfCov.matrixL ();
@@ -89,7 +89,7 @@ class SigmaPoints
             // Distributed points.. | This can be tuned if needed
             Vec<T, DimState * 2> meanExt;
 
-            meanExt.head<DimState>() = m_mean_ref;
+            meanExt.head(DimState) = m_mean_ref;
             meanExt.fill(T(0.)); // TODO: introduce the possibility to have noise bias
 
             for (unsigned i=1; i <= 2*DimState; ++i)
