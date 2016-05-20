@@ -3,6 +3,8 @@
 
 #include "unscented_KF.h"
 
+using namespace qukf;
+
 class MotionEstimation
 {
     public:
