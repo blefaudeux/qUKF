@@ -13,6 +13,9 @@ namespace qukf {
     template <typename T>
     using Vec3 = Eigen::Matrix<T, 3, 1>;
 
+    template <typename T>
+    using VecX = Eigen::Matrix<T, Eigen::Dynamic, 1>;
+
     template <typename T, size_t Rows, size_t Cols>
     using Mat = Eigen::Matrix<T, Rows, Cols>;
 
@@ -31,7 +34,9 @@ namespace qukf {
     template <typename T, size_t Rows>
     using MatR = Eigen::Matrix<T, Rows, Eigen::Dynamic>;
 
-    using MatXf = Eigen::MatrixXf;
+    using MatXf = MatX<float>;
+    using VecXf = VecX<float>;
+
 }
 
 #endif // EIGEN_TOOLS_H

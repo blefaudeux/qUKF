@@ -14,8 +14,8 @@
  *  @version 1.1
  */
 
-namespace qukf {
-
+namespace qukf
+{
     using namespace Eigen;
     using namespace std;
 
@@ -24,7 +24,6 @@ namespace qukf {
     {
         public:
             typedef Vec<T, DimState> VecState;
-            typedef Vec<T, DimState*2> VecStateExt;
             typedef Vec<T, DimMeas> VecMeas;
 
             typedef typename SigmaPoints<T,DimState, DimMeas>::MeasurementFunc MeasurementFunc;
@@ -138,24 +137,30 @@ namespace qukf {
             }
 
             // Gets -----
-            void getStatePre(MatX<T> &state_pre) const {
-                if (!b_use_quaternions) {
+            void getStatePre(VecX<T> &state_pre) const
+            {
+                if (!b_use_quaternions)
+                {
                     state_pre = k_state_pre.block(0,0, DimState, 1); // Only get the estimated variables, no noise elements
                 }
-                else {
+                else
+                {
                     state_pre.resize(DimState + k_state_q_pre.rows (), 1);
                     state_pre.block(0,0,DimState, 1) = k_state_pre.block(0,0, DimState, 1);
                     state_pre.block(DimState,0,k_state_q_pre.rows (), 1) = k_state_q_pre;
                 }
             }
 
-            void getStatePost(MatX<T> &state_post) const {
-                if (!b_use_quaternions) {
+            void getStatePost(VecX<T> &state_post) const
+            {
+                if (!b_use_quaternions)
+                {
                     state_post = k_state_post.block(0,0, DimState, 1);
-                } else {
+                } else
+                {
                     state_post.resize (DimState + k_state_q_post.rows (), 1);
-                    state_post.block(0,0,DimState, 1) = k_state_post.block(0,0, DimState, 1);
-                    state_post.block(DimState,0,k_state_q_post.rows (), 1) = k_state_q_post;
+                    state_post.head(DimState) = k_state_post.block(0,0, DimState, 1);
+                    state_post.tail(k_state_q_post.rows ()) = k_state_q_post;
                 }
             }
 

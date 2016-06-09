@@ -187,7 +187,7 @@ namespace qukf {
 
             void updateMean( MatR<T, DimState> const & sp, VecState &mean)
             {
-                mean = (sp * m_weight_mean.asDiagonal()).rowwise().mean();
+                mean = (sp * m_weight_mean.asDiagonal()).rowwise().mean().head(mean.rows());
             }
 
             void updateCov(MatR<T, DimState> const & sigma_points_1, VecState const & mean_1,

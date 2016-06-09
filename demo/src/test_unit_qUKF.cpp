@@ -78,8 +78,7 @@ int main() {
     }
 
     // Track the circling targets
-    float measurements[6] = {0,0,0,0,0,0};
-    float filtered_state[6], predicted_state[6], previous_state[6];
+    Eigen::VectorXf measurements, filtered_state, predicted_state, previous_state;
     int t;
 
     for(;;angle += angularStep) {
@@ -111,7 +110,7 @@ int main() {
             vec_poses[t]->add(Point2f( filtered_state[0], filtered_state[1]));
 
             // Draw both the noisy input and the filtered state :
-            draw(image, measurements, predicted_state, *vec_poses[t++]);
+            draw(image, measurements.data(), predicted_state.data(), *vec_poses[t++]);
         }
 
         if(!updateDisplay(image, WAIT_TIME_MS))

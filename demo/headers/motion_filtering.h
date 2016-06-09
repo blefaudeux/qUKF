@@ -24,10 +24,9 @@ class MotionEstimation
 
         ~MotionEstimation();
 
+        void getLatestState(VectorXf & state) const;
 
-        void getLatestState(float *state_out) const;
-
-        void getPropagatedState(float *state_out) const;
+        void getPropagatedState(VectorXf & state_out) const;
 
         void predict();
 
@@ -36,10 +35,9 @@ class MotionEstimation
                                     const float ukf_process_noise,
                                     const float ukf_process_q_noise);
 
-        void update(const float *variable);
+        void update(VectorXf const & measure);
 
-        void update(const float *speed,
-                    const float *angular_speed);
+        void update(VectorXf const & speed, VectorXf const & angular_speed);
 
     public:
         float dt;
@@ -51,13 +49,13 @@ class MotionEstimation
         std::vector<float> past_positions;
         std::vector<float[3]> past_speed;
 
-        UKF<float,6,6> *filter;
+        std::unique_ptr<UKF<float,3,3>> m_filter;
 
-        UKF<float,6,6>::VecMeas _measure;
+        UKF<float,3,3>::VecMeas _measure;
+        VectorXf m_lastMeasure;
         MatrixXf _initial_cov;
         MatrixXf _model_noise;
         MatrixXf _measurement_noise;
-        MatrixXf _measure_latest;
 
         MatrixXf _initial_q_cov;
         MatrixXf _model_q_noise;
