@@ -137,7 +137,7 @@ namespace qukf
             }
 
             // Gets -----
-            void getStatePre(VecX<T> &state_pre) const
+            void getStatePre(Vec<T, DimState> &state_pre) const
             {
                 if (!b_use_quaternions)
                 {
@@ -151,7 +151,7 @@ namespace qukf
                 }
             }
 
-            void getStatePost(VecX<T> &state_post) const
+            void getStatePost(Vec<T, DimState> &state_post) const
             {
                 if (!b_use_quaternions)
                 {
@@ -165,7 +165,8 @@ namespace qukf
             }
 
             // Sets -----
-            void setState(const MatX<T> &new_state, const MatX<T> &new_cov) {
+            void setState(Vec<T, DimState> const & new_state,
+                          Mat<T, DimState, DimState> const & new_cov) {
                 k_state_post.setZero ();
                 k_state_post.block(0,0, new_state.cols (), 1)  = new_state;
                 k_state_pre   = k_state_post;
@@ -174,10 +175,9 @@ namespace qukf
                 k_cov_pre   = k_cov_post;
             }
 
-            void setMeasurementNoise(const MatX<T> &measurement_noise) {
+            void setMeasurementNoise(const Mat<T, DimState, DimState> &measurement_noise) {
                 k_measurement_noise = measurement_noise;
 
-                // FIXME : dimension problem if k_cov is too small !
                 k_cov_pre.block (DimState + k_process_noise.cols (),
                                  DimState + k_process_noise.cols (),
                                  measurement_noise.cols (),

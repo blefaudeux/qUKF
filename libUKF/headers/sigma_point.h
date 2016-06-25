@@ -70,7 +70,7 @@ namespace qukf {
                 m_point_pred.setZero(DimState * 2, n_sigma_points);
 
                 // Mean
-                m_point_ref.col(0)  = m_mean_ref;
+                m_point_ref.col(0).head(DimState)  = m_mean_ref;
                 m_weight_mean(0) = m_kappa / (DimState + m_kappa);
                 m_weight_cov(0)  = m_kappa / (DimState + m_kappa);
 

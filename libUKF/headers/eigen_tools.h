@@ -20,6 +20,9 @@ namespace qukf {
     using Mat = Eigen::Matrix<T, Rows, Cols>;
 
     template <typename T>
+    using Mat2 = Eigen::Matrix<T, 2, 2>;
+
+    template <typename T>
     using Mat3 = Eigen::Matrix<T, 3, 3>;
 
     template <typename T, size_t Rows_Cols>
@@ -36,6 +39,12 @@ namespace qukf {
 
     using MatXf = MatX<float>;
     using VecXf = VecX<float>;
+
+    using Mat2f = Mat2<float>;
+    using Vec2f = Vec2<float>;
+
+    using Mat3f = Mat3<float>;
+    using Vec3f = Vec3<float>;
 
 }
 

@@ -69,7 +69,7 @@ int main() {
     IplImage * image = cvCreateImage(cvSize(width,height),8,3);
 
     // Instanciate the motion filters
-    float poses[3] = {0,0,0};
+    float poses[2] = {0, 0};
     vector<unique_ptr<MotionEstimation>> motion_estimators(N_TARGETS);
 
     for (auto & motion_estimator :  motion_estimators)
@@ -78,7 +78,7 @@ int main() {
     }
 
     // Track the circling targets
-    Eigen::VectorXf measurements, filtered_state, predicted_state, previous_state;
+    Eigen::Vector2f measurements, filtered_state, predicted_state, previous_state;
     int t;
 
     for(;;angle += angularStep) {
@@ -88,26 +88,22 @@ int main() {
         // Create a new measurement for every target, and do the update
         for (auto & motion_estimator : motion_estimators)
         {
-            motion_estimator->getLatestState(previous_state);
+            motion_estimator->getStatePost(previous_state);
 
             // Propagate the previous state
             motion_estimator->predict();
 
             // Get the predicted state :
-            motion_estimator->getPropagatedState(predicted_state);
+            motion_estimator->getStatePost(predicted_state);
 
             // Update the state with a new noisy measurement :
-            measurements[0] = (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%30);
-            measurements[1] = (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%30);
-
-            // Define a new 'speed' measurement
-            measurements[3] = measurements[0] - previous_state[0];
-            measurements[4] = measurements[1] - previous_state[1];
+            measurements = { (width>>1)  + 300*cos(angle) + (rand()%2==1?-1:1)*(rand()%30),
+                             (height>>1) + 300*sin(angle) + (rand()%2==1?-1:1)*(rand()%30) };
 
             // Get the filtered state :
             motion_estimator->update(measurements);
-            motion_estimator->getLatestState(filtered_state);
-            vec_poses[t]->add(Point2f( filtered_state[0], filtered_state[1]));
+            motion_estimator->getStatePost(filtered_state);
+            vec_poses[t]->add(Point2f( filtered_state(0), filtered_state(1)));
 
             // Draw both the noisy input and the filtered state :
             draw(image, measurements.data(), predicted_state.data(), *vec_poses[t++]);

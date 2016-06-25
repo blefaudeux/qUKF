@@ -3,30 +3,20 @@
 
 #include "unscented_KF.h"
 
+using namespace std;
 using namespace qukf;
+
 
 class MotionEstimation
 {
     public:
+
         MotionEstimation(const float *variable,
-                         const float ukf_measure_noise,
-                         const float ukf_process_noise,
+                         const float measure_noise,
+                         const float process_noise,
                          const float ukf_kappa);
 
-        MotionEstimation(const float *speed,
-                         const float *angular_speed,
-                         const float ukf_measure_noise,
-                         const float ukf_measure_q_noise,
-                         const float ukf_process_noise,
-                         const float ukf_process_q_noise,
-                         const float ukf_kappa,
-                         const float ukf_kappa_q);
-
-        ~MotionEstimation();
-
-        void getLatestState(VectorXf & state) const;
-
-        void getPropagatedState(VectorXf & state_out) const;
+        void getStatePost(Vec2f & state) const;
 
         void predict();
 
@@ -35,9 +25,8 @@ class MotionEstimation
                                     const float ukf_process_noise,
                                     const float ukf_process_q_noise);
 
-        void update(VectorXf const & measure);
+        void update(Vec2f const & measure);
 
-        void update(VectorXf const & speed, VectorXf const & angular_speed);
 
     public:
         float dt;
@@ -46,21 +35,16 @@ class MotionEstimation
     private :
         bool _filter_angular_speed;
 
-        std::vector<float> past_positions;
-        std::vector<float[3]> past_speed;
+        vector<float> past_positions;
+        vector<float[3]> past_speed;
 
-        std::unique_ptr<UKF<float,3,3>> m_filter;
+        unique_ptr<UKF<float,2,2>> m_filter;
 
-        UKF<float,3,3>::VecMeas _measure;
-        VectorXf m_lastMeasure;
-        MatrixXf _initial_cov;
-        MatrixXf _model_noise;
-        MatrixXf _measurement_noise;
-
-        MatrixXf _initial_q_cov;
-        MatrixXf _model_q_noise;
-        MatrixXf _measurement_q_noise;
-
+        UKF<float,2,2>::VecMeas m_measure;
+        Vec2f m_lastMeasure;
+        Mat2f m_initial_cov;
+        Mat2f m_model_noise;
+        Mat2f m_measurement_noise;
 
 };
 
