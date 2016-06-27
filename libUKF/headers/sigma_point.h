@@ -10,6 +10,7 @@
  *  @author Benjamin Lefaudeux (blefaudeux at github)
  *  @file sigma_point.h
  *  @brief Implements a class of sigma points, to be used with UKF
+ *  The structure is not generic, the noise vector being of the state dimension
  *  @version 2.0
  *  @date 12-11-2013
  */
@@ -29,26 +30,35 @@ namespace qukf {
     {
             typedef Vec<T, DimState> VecState;
             typedef Vec<T, DimMeas> VecMeas;
-            typedef MatSquare<T, DimState> MatCovState;
-            typedef MatSquare<T, DimMeas>  MatCovMeas;
+
+            typedef MatSquare<T, DimState> MatState;
+            typedef MatSquare<T, DimMeas> MatMeas;
+
+            // Extended state definitions
+            // See the seminal paper from Julier & Uhlmann
+            static size_t const DimExtMeas = DimMeas*2;
+            static size_t const DimExtState = DimState * 2;
+
+            typedef Vec<T, DimExtMeas> VecExtMeas;
+            typedef Vec<T, DimExtState> VecExtState;
+
+            typedef MatSquare<T, DimState> MatExtState;
+            typedef MatSquare<T, DimMeas>  MatExtMeas;
 
         public:
-            typedef function<VecMeas(VecMeas const &)> MeasurementFunc;
-            typedef function<VecState(VecState const &)> PropagationFunc;
+            typedef function<VecExtMeas(VecExtMeas const &)> MeasurementFunc;
+            typedef function<VecExtState(VecExtState const &)> PropagationFunc;
 
         public:
             SigmaPoints( VecState const &mean,
                          Mat<T, DimState, DimMeas> const  &cov,
-                         Mat<T, DimState, DimMeas> const  &process_noise,
+                         Mat<T, DimState, DimState> const  &process_noise,
                          Mat<T, DimState, DimMeas> const  &process_cross_noise,
                          float kappa)
             {
                 m_mean_ref   = mean;
 
-                m_cov_ref        = cov;
-                m_cov_meas         = cov;
-                m_cov_x_pred_meas  = cov;
-                m_cov_x_pred_state = cov;
+                m_cov_ref = m_cov_meas = m_cov_pred = cov;
 
                 m_process_noise = process_noise;
                 m_process_cross_noise = process_cross_noise;
@@ -106,23 +116,23 @@ namespace qukf {
                 }
             }
 
-            void getState(VecState &mean, MatCovState &cov) const
+            void getState(VecState &mean, MatExtState &cov) const
             {
                 mean  = m_mean_ref;
                 cov   = m_cov_ref;
             }
 
-            void getMeasuredState(VecMeas &mean, MatCovMeas &cov_measure, MatCovState &cov_cross) const
+            void getMeasuredState(VecState &mean, MatMeas &cov_measure, MatMeas &cov_cross) const
             {
-                mean        = m_mean_meas;
-                cov_measure = m_cov_meas;
-                cov_cross   = m_cov_x_pred_meas;
+                mean        = m_mean_meas.top(DimState);
+                cov_measure = m_cov_meas.topLeftCorner(DimMeas, DimMeas);
+                cov_cross   = m_cov_meas.topRightCorner(DimMeas, DimMeas);
             }
 
-            void getPredictedState(VecState &mean, MatCovState &cov, MatCovState &cov_cross) const
+            void getPredictedState(VecMeas &mean, MatExtState &cov, MatExtState &cov_cross) const
             {
-                mean      = m_mean_pred;
-                cov       = m_cov_predicted;
+                mean      = m_mean_pred.top(DimMeas);
+                cov       = m_cov_pred;
                 cov_cross = m_cov_x_pred_state;
             }
 
@@ -130,19 +140,28 @@ namespace qukf {
             {
                 // Compute the projection of the sigma points onto the measurement space
                 for (unsigned i=0; i<m_point_pred.cols(); ++i) {
-                    m_point_meas.col(i) = _measurementFunc(m_point_pred.col(i));
+                    m_point_meas.col(i).head(DimState) = _measurementFunc(m_point_pred.col(i).head(DimState));
+                    m_point_meas.col(i).tail(DimState) = _measurementFunc(m_point_pred.col(i).tail(DimState));
                 }
 
                 // Compute the mean of the measured points :
                 updateMean(m_point_meas, m_mean_meas);
 
                 // Compute the intrinsic covariance of the measured points :
-                auto const zm_meas = m_point_meas.colwise() - m_mean_meas;
+                Vec<T, DimState * 2> measExt;
+                measExt.setZero();
+                measExt.head(DimState) = m_mean_meas;
+
+                auto const zm_meas = m_point_meas.colwise() - measExt;
                 m_cov_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_meas.transpose();
 
                 // Compute the crossed covariance between measurement space and intrisic space
-                auto const zm_pred = m_point_pred.colwise() - m_mean_pred;
-                m_cov_x_pred_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose();
+                Vec<T, DimState * 2> predExt;
+                predExt.setZero();
+                predExt.head(DimState) = m_mean_pred;
+
+                auto const zm_pred = m_point_pred.colwise() - predExt;
+                m_cov_x_pred_meas = (m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose()).topLeftCorner<DimState>();
             }
 
             void propagateSigmaPoints()
@@ -158,14 +177,14 @@ namespace qukf {
 
                 updateCov (m_point_pred, m_mean_pred,
                            m_point_pred, m_mean_pred,
-                           m_cov_predicted);
+                           m_cov_pred);
 
                 updateCov (m_point_pred, m_mean_pred,
                            m_point_ref, m_mean_ref,
                            m_cov_x_pred_state);
             }
 
-            void setState(VecState const & mean, MatCovState const & cov)
+            void setState(VecState const & mean, MatExtState const & cov)
             {
                 m_mean_ref = mean;
                 m_cov_ref  = cov;
@@ -207,22 +226,20 @@ namespace qukf {
             float   m_kappa; // Sigma distribution parameters
 
             // State
-            VecState    m_mean_ref;
-            VecState    m_mean_pred;
-            VecMeas     m_mean_meas;
+            VecExtState m_mean_ref;
+            VecExtState m_mean_pred;
+            VecExtMeas  m_mean_meas;
 
-            MatCovState                 m_cov_ref;         // Covariance of the initial state
-            MatCovState                 m_cov_predicted;   // Covariance of the predicted state
-            MatCovMeas                  m_cov_meas;        // Covariance within measured points
-            MatCovState                 m_cov_x_pred_state; // Covariance between propagated and initial points   (~Process noise)
-            Mat<T, DimState, DimMeas>   m_cov_x_pred_meas;  // Covariance between propagated and measured points  (~Measurement noise)
+            MatExtState m_cov_ref;
+            MatExtState m_cov_pred;
+            MatExtMeas  m_cov_meas;
 
-            MatCovState m_process_noise;
-            MatCovState m_process_cross_noise;
+            Mat<T, DimState, DimState>  m_process_noise;
+            Mat<T, DimState, DimMeas>   m_process_cross_noise;
 
             // Sigma points machinery
-            MatR<T, DimState * 2>   m_point_pred;
-            MatR<T, DimState * 2>   m_point_ref;
+            MatR<T, DimExtState>    m_point_pred;
+            MatR<T, DimExtState>    m_point_ref;
             MatR<T, DimMeas>        m_point_meas;
 
             Vec<T, DimState * 2> m_weight_mean;
