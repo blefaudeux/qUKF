@@ -133,7 +133,7 @@ namespace qukf {
             {
                 mean      = m_mean_pred.top(DimMeas);
                 cov       = m_cov_pred;
-                cov_cross = m_cov_x_pred_state;
+                cov_cross = m_cov_meas;
             }
 
             void measureSigmaPoints()
@@ -152,7 +152,7 @@ namespace qukf {
                 measExt.setZero();
                 measExt.head(DimState) = m_mean_meas;
 
-                auto const zm_meas = m_point_meas.colwise() - measExt;
+                auto const zm_meas = (m_point_meas.colwise() - measExt).eval();
                 m_cov_meas = m_weight_cov.normalized().asDiagonal() * zm_meas * zm_meas.transpose();
 
                 // Compute the crossed covariance between measurement space and intrisic space
@@ -160,8 +160,8 @@ namespace qukf {
                 predExt.setZero();
                 predExt.head(DimState) = m_mean_pred;
 
-                auto const zm_pred = m_point_pred.colwise() - predExt;
-                m_cov_x_pred_meas = (m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose()).topLeftCorner<DimState>();
+                auto const zm_pred = (m_point_pred.colwise() - predExt).eval();
+                m_cov_meas = ((m_weight_cov.normalized().asDiagonal() * zm_meas * zm_pred.transpose()).topLeftCorner<DimState>()).eval();
             }
 
             void propagateSigmaPoints()

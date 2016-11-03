@@ -10,9 +10,11 @@
  *  @date 12-11-2013
  */
 
+#include <iostream>
 
-namespace qukf{
-
+namespace qukf
+{
+    using namespace std;
 
     SigmaQPoints::SigmaQPoints(const Matrix<float, 3, 1> &angles_mean,
                                const Matrix<float, 3, 3> &angles_cov,
@@ -232,7 +234,7 @@ namespace qukf{
         quaternionToEuler (_q_mean_predicted, _mean_predicted);
 
 #ifdef DEBUG
-        cout << "SigmaQPoints : predicted mean\n" << _mean_predicted << endl;
+        std::cout << "SigmaQPoints : predicted mean\n" << _mean_predicted << endl;
 #endif
 
         /* --- Update covariance of the sigma points : ---
