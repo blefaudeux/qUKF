@@ -1,4 +1,4 @@
-qUKF
+qUKF [![Build Status](https://travis-ci.org/blefaudeux/qUKF.svg?branch=master)](https://travis-ci.org/blefaudeux/qUKF)
 =====
 
 What is it ?
